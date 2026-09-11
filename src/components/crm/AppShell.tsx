@@ -37,9 +37,14 @@ export function AppShell({
   const queryClient = useQueryClient();
 
   const signOut = async () => {
+    localStorage.removeItem("crm_user");
     await queryClient.cancelQueries();
     queryClient.clear();
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
     navigate({ to: "/auth", replace: true });
   };
 

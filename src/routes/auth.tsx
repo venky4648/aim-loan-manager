@@ -1,10 +1,8 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { GraduationCap, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { GraduationCap, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +13,7 @@ export const Route = createFileRoute("/auth")({
       { title: "Sign In | Normiloans CRM" },
       { name: "description", content: "Sign in to the Normiloans education loan CRM to manage leads and cases." },
       { property: "og:title", content: "Sign In | Normiloans CRM" },
-      { property: "og:description", content: "Secure access for sales, processing and management users." },
+      { property: "og:description", content: "Direct access for sales, processing and management users." },
     ],
   }),
   component: AuthPage,
@@ -29,50 +27,34 @@ function AuthPage() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
-    });
-  }, [navigate]);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const directLogin = (userEmail?: string, userName?: string) => {
     setBusy(true);
-    try {
-      if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin, data: { full_name: name } },
-        });
-        if (error) throw error;
-        if (!data.session) {
-          toast.success("Check your email to confirm your account.");
-          return;
-        }
-        navigate({ to: "/dashboard", replace: true });
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate({ to: "/dashboard", replace: true });
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setBusy(false);
-    }
+    const resolvedEmail = userEmail?.trim() || email.trim() || "admin@normiloans.com";
+    const resolvedName = userName?.trim() || name.trim() || (mode === "signup" ? "Team Member" : "Admin User");
+
+    localStorage.setItem(
+      "crm_user",
+      JSON.stringify({
+        email: resolvedEmail,
+        name: resolvedName,
+        role: "admin",
+        loggedInAt: new Date().toISOString(),
+      })
+    );
+
+    toast.success(`Welcome to Normiloans, ${resolvedName}!`);
+    setTimeout(() => {
+      navigate({ to: "/dashboard", replace: true });
+    }, 150);
   };
 
-  const google = async () => {
-    setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (result.error) {
-      setBusy(false);
-      toast.error("Google sign-in failed. Please try again.");
-      return;
-    }
-    if (result.redirected) return;
-    navigate({ to: "/dashboard", replace: true });
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    directLogin();
+  };
+
+  const google = () => {
+    directLogin("google.user@normiloans.com", "Google Account User");
   };
 
   return (
@@ -100,25 +82,31 @@ function AuthPage() {
         <div className="w-full max-w-sm">
           <h1 className="text-2xl font-semibold">{mode === "signin" ? "Sign in" : "Create your account"}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "signin" ? "Access your Normiloans workspace." : "Set up access for your team member."}
+            {mode === "signin"
+              ? "Enter anything to jump directly into the workspace."
+              : "Enter any name to continue."}
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
             {mode === "signup" ? (
               <div className="space-y-2">
                 <Label htmlFor="name">Full name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                <Input
+                  id="name"
+                  placeholder="e.g. Rahul Sharma"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               </div>
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="email">Work email</Label>
               <Input
                 id="email"
-                type="email"
-                autoComplete="email"
+                type="text"
+                placeholder="admin@normiloans.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
               />
             </div>
             <div className="space-y-2">
@@ -126,15 +114,20 @@ function AuthPage() {
               <Input
                 id="password"
                 type="password"
-                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                placeholder="Any password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                minLength={6}
-                required
               />
             </div>
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? <Loader2 className="size-4 animate-spin" /> : mode === "signin" ? "Sign in" : "Create account"}
+              {busy ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  {mode === "signin" ? "Sign in to Dashboard" : "Create Account & Enter"}
+                  <ArrowRight className="size-4" />
+                </span>
+              )}
             </Button>
           </form>
 
@@ -149,6 +142,7 @@ function AuthPage() {
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "signin" ? "Need an account?" : "Already have access?"}{" "}
             <button
+              type="button"
               className="font-medium text-primary hover:underline"
               onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
             >
