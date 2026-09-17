@@ -26,7 +26,7 @@ function Dashboard() {
       title="Pipeline dashboard"
       subtitle="Hyderabad, Telangana · September 2026"
       action={
-        <Button asChild size="sm">
+        <Button asChild size="sm" className="font-semibold shadow-md shadow-primary/20">
           <Link to="/leads">Open pipeline</Link>
         </Button>
       }
@@ -136,7 +136,7 @@ function Dashboard() {
                     {l.live} live files · TAT {l.avgTat}
                   </p>
                 </div>
-                <span className="stat-figure text-sm text-success">{l.sanctionRate}%</span>
+                <span className="stat-figure text-sm text-success font-semibold">{l.sanctionRate}%</span>
               </li>
             ))}
           </ul>

@@ -21,17 +21,19 @@ function Lenders() {
     <AppShell
       title="Lender partners"
       subtitle="Banks and NBFCs currently on the panel"
-      action={<Button size="sm">Add lender</Button>}
+      action={<Button size="sm" className="font-semibold shadow-md shadow-primary/20">Add lender</Button>}
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {LENDERS.map((l) => (
-          <article key={l.name} className="surface-card p-6">
+          <article key={l.name} className="surface-card p-6 transition-all hover:shadow-md">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold">{l.name}</h2>
                 <p className="text-xs text-muted-foreground">{l.type}</p>
               </div>
-              <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">{l.payout} payout</span>
+              <span className="rounded-full bg-primary/10 border border-primary/20 px-2.5 py-1 text-xs font-bold text-primary">
+                {l.payout} payout
+              </span>
             </div>
             <dl className="mt-5 grid grid-cols-3 gap-3 text-center">
               <div>
@@ -40,14 +42,14 @@ function Lenders() {
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Sanction</dt>
-                <dd className="stat-figure mt-1 text-xl text-success">{l.sanctionRate}%</dd>
+                <dd className="stat-figure mt-1 text-xl text-success font-semibold">{l.sanctionRate}%</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted-foreground">Avg TAT</dt>
                 <dd className="stat-figure mt-1 text-xl">{l.avgTat}</dd>
               </div>
             </dl>
-            <div className="mt-5 h-2 rounded-full bg-muted">
+            <div className="mt-5 h-2 rounded-full bg-muted overflow-hidden">
               <div className="h-2 rounded-full bg-primary" style={{ width: `${l.sanctionRate}%` }} />
             </div>
           </article>

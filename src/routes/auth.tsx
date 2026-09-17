@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { GraduationCap, Loader2, ArrowRight } from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NormiloansLogo } from "@/components/crm/NormiloansLogo";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -58,48 +59,62 @@ function AuthPage() {
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="hidden flex-col justify-between bg-sidebar p-12 text-sidebar-foreground lg:flex">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-            <GraduationCap className="size-5" />
-          </span>
-          <span className="font-display text-lg font-semibold">Normiloans</span>
+    <div className="grid min-h-screen lg:grid-cols-2 bg-background">
+      {/* Left Branding Side */}
+      <div className="hidden flex-col justify-between bg-sidebar p-12 text-sidebar-foreground lg:flex relative overflow-hidden">
+        <div className="absolute -right-20 -top-20 size-80 rounded-full bg-primary/10 blur-3xl" />
+        
+        <Link to="/" className="flex items-center">
+          <NormiloansLogo variant="dark" size="xl" showTagline={true} />
         </Link>
-        <div>
-          <h2 className="font-display text-3xl font-semibold leading-tight">
-            One pipeline from first call to college joining.
+        
+        <div className="relative z-10 my-auto py-12">
+          <span className="inline-block rounded-full bg-primary/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-primary">
+            Education Loan Aggregator CRM
+          </span>
+          <h2 className="mt-4 font-display text-4xl font-bold leading-tight text-white">
+            One pipeline from first lead to college joining.
           </h2>
-          <p className="mt-4 max-w-md text-sm text-sidebar-foreground/70">
-            No more notebooks, WhatsApp threads and spreadsheets. Every lead, document, sanction, disbursement and
-            commission in a single place your team can trust.
+          <p className="mt-4 max-w-md text-base text-sidebar-foreground/80 leading-relaxed">
+            Eliminate manual spreadsheets and WhatsApp groups. Track student applications, bank logins, sanctions, disbursements, and commission payouts in one place.
           </p>
         </div>
-        <p className="text-xs text-sidebar-foreground/50">Hyderabad, Telangana · Expanding to Tier 1 & Tier 2 India</p>
+
+        <div className="flex items-center justify-between text-xs text-sidebar-foreground/60 border-t border-sidebar-border pt-4">
+          <p>Normiloans · Hyderabad, Telangana</p>
+          <p>Tier 1 & Tier 2 India Expansion</p>
+        </div>
       </div>
 
+      {/* Right Login Form Side */}
       <div className="flex items-center justify-center px-6 py-16">
-        <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-semibold">{mode === "signin" ? "Sign in" : "Create your account"}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+        <div className="w-full max-w-sm surface-card p-8 shadow-xl">
+          <div className="mb-6 text-center lg:hidden">
+            <NormiloansLogo variant="full-color" size="lg" showTagline={true} className="justify-center" />
+          </div>
+
+          <h1 className="text-2xl font-bold text-foreground">
+            {mode === "signin" ? "Sign in to CRM" : "Create team account"}
+          </h1>
+          <p className="mt-1 text-xs text-muted-foreground">
             {mode === "signin"
-              ? "Enter anything to jump directly into the workspace."
-              : "Enter any name to continue."}
+              ? "Access your leads, lender submissions, and payouts dashboard."
+              : "Enter details to create an executive login."}
           </p>
 
-          <form onSubmit={submit} className="mt-8 space-y-4">
+          <form onSubmit={submit} className="mt-6 space-y-4">
             {mode === "signup" ? (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="name">Full name</Label>
                 <Input
                   id="name"
-                  placeholder="e.g. Rahul Sharma"
+                  placeholder="e.g. Praveen Kumar"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
             ) : null}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="email">Work email</Label>
               <Input
                 id="email"
@@ -109,17 +124,18 @@ function AuthPage() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Any password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={busy}>
+
+            <Button type="submit" className="w-full font-semibold shadow-lg shadow-primary/20" disabled={busy}>
               {busy ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
@@ -131,7 +147,7 @@ function AuthPage() {
             </Button>
           </form>
 
-          <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
             <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
           </div>
 
@@ -139,11 +155,11 @@ function AuthPage() {
             Continue with Google
           </Button>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
+          <p className="mt-6 text-center text-xs text-muted-foreground">
             {mode === "signin" ? "Need an account?" : "Already have access?"}{" "}
             <button
               type="button"
-              className="font-medium text-primary hover:underline"
+              className="font-semibold text-primary hover:underline"
               onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
             >
               {mode === "signin" ? "Create one" : "Sign in"}

@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 
 import { AppShell, StageBadge } from "@/components/crm/AppShell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CASES, STAGES, formatLakh } from "@/lib/demo-data";
+import { StudentRegistrationModal } from "@/components/crm/StudentRegistrationModal";
 
 export const Route = createFileRoute("/_authenticated/leads")({
   head: () => ({
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/_authenticated/leads")({
 function Leads() {
   const [query, setQuery] = useState("");
   const [stage, setStage] = useState<string>("All");
+  const [addLeadOpen, setAddLeadOpen] = useState(false);
 
   const rows = useMemo(
     () =>
@@ -35,7 +37,15 @@ function Leads() {
     <AppShell
       title="Leads & cases"
       subtitle="Every applicant from first call to college joining"
-      action={<Button size="sm">Add lead</Button>}
+      action={
+        <Button
+          size="sm"
+          className="font-semibold shadow-md shadow-primary/20"
+          onClick={() => setAddLeadOpen(true)}
+        >
+          <UserPlus className="mr-1.5 size-4" /> Add lead
+        </Button>
+      }
     >
       <div className="surface-card p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -56,7 +66,7 @@ function Leads() {
               onClick={() => setStage(s)}
               className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 stage === s
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-sm"
                   : "bg-secondary text-secondary-foreground hover:bg-muted"
               }`}
             >
@@ -119,6 +129,12 @@ function Leads() {
           </table>
         </div>
       </div>
+
+      {/* Shared Student Registration Modal */}
+      <StudentRegistrationModal
+        open={addLeadOpen}
+        onOpenChange={setAddLeadOpen}
+      />
     </AppShell>
   );
 }

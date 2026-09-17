@@ -22,7 +22,7 @@ function Disbursements() {
     <AppShell title="Disbursement & payouts" subtitle="Reconcile what the lender released and what you earned">
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Disbursed this month" value="₹2.4 Cr" hint="9 tranches released" />
-        <StatCard label="Commission booked" value="₹11.4 L" accent />
+        <StatCard label="Commission booked" value="₹11.4 L" hint="Total revenue earned" accent />
         <StatCard label="Awaiting receipt" value="₹3.2 L" hint="Across 6 lender invoices" />
       </div>
 
@@ -54,8 +54,8 @@ function Disbursements() {
                   <td className="px-5 py-4 stat-figure">{c.commission ? formatINR(c.commission) : "—"}</td>
                   <td className="px-5 py-4">
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                        c.commissionReceived ? "bg-success/12 text-success" : "bg-warning/15 text-warning-foreground"
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        c.commissionReceived ? "bg-success/15 text-success" : "bg-warning/20 text-warning-foreground"
                       }`}
                     >
                       {c.commissionReceived ? "Received" : "Pending"}
