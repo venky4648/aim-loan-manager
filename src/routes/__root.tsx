@@ -84,7 +84,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Normiloans CRM" },
       { property: "og:description", content: "Education loan lead-to-disbursement management platform." },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "/normiloans-logo.png" },
+      { property: "og:image:secure_url", content: "/normiloans-logo.png" },
+      { property: "og:image:type", content: "image/png" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "/normiloans-logo.png" },
     ],
     links: [
       {
@@ -97,7 +101,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap",
       },
+      { rel: "icon", href: "/normiloans-logo.png", type: "image/png" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "apple-touch-icon", href: "/normiloans-logo.png" },
     ],
   }),
   shellComponent: RootShell,
