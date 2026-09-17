@@ -54,10 +54,6 @@ function AuthPage() {
     directLogin();
   };
 
-  const google = () => {
-    directLogin("google.user@normiloans.com", "Google Account User");
-  };
-
   return (
     <div className="grid min-h-screen lg:grid-cols-2 bg-background">
       {/* Left Branding Side */}
@@ -146,14 +142,6 @@ function AuthPage() {
               )}
             </Button>
           </form>
-
-          <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <Button variant="outline" className="w-full" onClick={google} disabled={busy}>
-            Continue with Google
-          </Button>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
             {mode === "signin" ? "Need an account?" : "Already have access?"}{" "}
