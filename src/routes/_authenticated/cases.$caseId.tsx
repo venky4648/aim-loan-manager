@@ -1,16 +1,16 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-
 import { AppShell, StageBadge } from "@/components/crm/AppShell";
 import { Button } from "@/components/ui/button";
 import { CASES, formatINR, formatLakh } from "@/lib/demo-data";
+import { useAuth } from "@/lib/auth-context";
+import { toast } from "sonner";
+import { Check, Edit3, ShieldAlert } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cases/$caseId")({
   head: () => ({
     meta: [
       { title: "Case File | Normiloans CRM" },
       { name: "description", content: "Student, co-applicant, collateral, documents and lender status for one case." },
-      { property: "og:title", content: "Case File | Normiloans CRM" },
-      { property: "og:description", content: "Full applicant file with lender submission and sanction tracking." },
     ],
   }),
   component: CaseDetail,
@@ -47,8 +47,12 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 
 function CaseDetail() {
   const { caseId } = Route.useParams();
+  const { role, hasPerm } = useAuth();
+
   const record = CASES.find((c) => c.id === caseId);
   if (!record) throw notFound();
+
+  const canEditCase = hasPerm("cases:edit");
 
   return (
     <AppShell
@@ -57,9 +61,19 @@ function CaseDetail() {
       action={
         <div className="flex items-center gap-2">
           <StageBadge stage={record.stage} />
-          <Button size="sm" variant="outline">
-            Update status
-          </Button>
+          {canEditCase ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => toast.success(`Updating status for ${record.student} (${role.toUpperCase()} Action)`)}
+            >
+              <Edit3 className="mr-1.5 size-3.5" /> Update status
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1 bg-muted px-2.5 py-1 rounded-md">
+              <ShieldAlert className="size-3 text-amber-500" /> Read-Only
+            </span>
+          )}
         </div>
       }
     >
@@ -83,13 +97,23 @@ function CaseDetail() {
           <p className="stat-figure mt-2 text-2xl">{record.disbursed ? formatLakh(record.disbursed) : "—"}</p>
           <p className="text-xs text-muted-foreground">{record.disbursed ? "Tranche 1 released" : "Not started"}</p>
         </div>
-        <div className="surface-card p-5">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Commission</p>
-          <p className="stat-figure mt-2 text-2xl">{record.commission ? formatINR(record.commission) : "—"}</p>
-          <p className="text-xs text-muted-foreground">
-            {record.commission ? (record.commissionReceived ? "Received" : "Pending receipt") : "Not applicable yet"}
-          </p>
-        </div>
+
+        {/* Commission only visible to Admin and Processing */}
+        {role === "admin" || role === "processing" || role === "viewer" ? (
+          <div className="surface-card p-5">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Commission</p>
+            <p className="stat-figure mt-2 text-2xl">{record.commission ? formatINR(record.commission) : "—"}</p>
+            <p className="text-xs text-muted-foreground">
+              {record.commission ? (record.commissionReceived ? "Received" : "Pending receipt") : "Not applicable yet"}
+            </p>
+          </div>
+        ) : (
+          <div className="surface-card p-5 bg-muted/40">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Sales Tracking</p>
+            <p className="stat-figure mt-2 text-xl text-primary">Assigned</p>
+            <p className="text-xs text-muted-foreground">Executive: {record.owner}</p>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -138,17 +162,29 @@ function CaseDetail() {
               {record.documents.map((d) => (
                 <li key={d.name} className="flex items-center justify-between py-3 text-sm">
                   <span>{d.name}</span>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      d.status === "Verified"
-                        ? "bg-success/12 text-success"
-                        : d.status === "Received"
-                          ? "bg-info/12 text-info"
-                          : "bg-warning/15 text-warning-foreground"
-                    }`}
-                  >
-                    {d.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        d.status === "Verified"
+                          ? "bg-success/12 text-success"
+                          : d.status === "Received"
+                            ? "bg-info/12 text-info"
+                            : "bg-warning/15 text-warning-foreground"
+                      }`}
+                    >
+                      {d.status}
+                    </span>
+                    {(role === "processing" || role === "admin") && d.status !== "Verified" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs font-semibold text-success hover:bg-success/10"
+                        onClick={() => toast.success(`Marked ${d.name} as Verified`)}
+                      >
+                        <Check className="mr-1 size-3" /> Mark Verified
+                      </Button>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
