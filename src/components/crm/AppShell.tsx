@@ -127,7 +127,7 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col bg-sidebar px-5 py-6 text-sidebar-foreground md:flex border-r-2 border-[#1E3A5F]">
+      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col bg-sidebar px-5 py-6 text-sidebar-foreground md:flex border-r-2 border-[#1E3A5F] overflow-y-auto no-scrollbar">
         {/* Logo */}
         <Link to="/dashboard" className="mb-6 flex items-center px-1 py-2 transition-opacity hover:opacity-95">
           <NormiloansLogo variant="dark" size="lg" showTagline={true} />
@@ -154,7 +154,7 @@ export function AppShell({
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex flex-1 flex-col gap-1.5 overflow-y-auto">
+        <nav className="flex flex-1 flex-col gap-1.5 overflow-y-auto no-scrollbar">
           {navItems.map((item) => {
             const displayLabel = item.labelMap ? item.labelMap[role] || item.label : item.label;
             return (
@@ -291,7 +291,7 @@ export function AppShell({
         </header>
 
         {/* Mobile Navigation bar */}
-        <nav className="flex gap-1 overflow-x-auto border-b-2 border-[#CBD5E1] bg-card px-3 py-2 md:hidden">
+        <nav className="flex gap-1 overflow-x-auto no-scrollbar border-b-2 border-[#CBD5E1] bg-card px-3 py-2 md:hidden">
           {navItems.map((item) => {
             const displayLabel = item.labelMap ? item.labelMap[role] || item.label : item.label;
             return (
