@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Loader2, ArrowRight, ShieldCheck, Headphones, FileText, Eye, KeyRound } from "lucide-react";
+import { Loader2, ArrowRight, CheckCircle2, Mail, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,13 @@ import { Label } from "@/components/ui/label";
 import { NormiloansLogo } from "@/components/crm/NormiloansLogo";
 import { useAuth } from "@/lib/auth-context";
 import { UserRole } from "@/lib/permissions";
+import { loginUser, registerUser, requestPasswordReset } from "@/lib/api-client";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign In | Normiloans CRM" },
-      { name: "description", content: "Sign in to the Normiloans education loan CRM to manage leads and cases." },
+      { title: "Sign In & Registration | Normiloans CRM" },
+      { name: "description", content: "Sign in or register for the Normiloans education loan CRM." },
     ],
   }),
   component: AuthPage,
@@ -23,11 +24,16 @@ export const Route = createFileRoute("/auth")({
 export function AuthPage() {
   const navigate = useNavigate();
   const { setRole } = useAuth();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("venkatesh.k@normiloans.com");
-  const [password, setPassword] = useState("normi@2026");
+
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [selectedRole, setSelectedRole] = useState<UserRole>("sales");
+
   const [busy, setBusy] = useState(false);
+  const [registeredEmailSuccess, setRegisteredEmailSuccess] = useState<string | null>(null);
+  const [forgotSuccessEmail, setForgotSuccessEmail] = useState<string | null>(null);
 
   const performLogin = (roleToSet: UserRole, userEmail: string, userName: string) => {
     setBusy(true);
@@ -49,17 +55,98 @@ export function AuthPage() {
     }, 200);
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Default form login resolves to admin or matching email
-    if (email.includes("praveen")) {
-      performLogin("sales", email, "Praveen K");
-    } else if (email.includes("nikhil")) {
-      performLogin("processing", email, "Nikhil V");
-    } else if (email.includes("swathi")) {
-      performLogin("viewer", email, "Swathi Sharma");
+
+    if (mode === "forgot") {
+      if (!email || !email.trim()) {
+        toast.error("Please enter your registered work email address.");
+        return;
+      }
+
+      const emailRegex = /^\S+@\S+\.\S+$/;
+      if (!emailRegex.test(email.trim())) {
+        toast.error("Please enter a valid work email address format.");
+        return;
+      }
+
+      setBusy(true);
+      const res = await requestPasswordReset(email.trim());
+      setBusy(false);
+
+      if (res.success) {
+        setForgotSuccessEmail(email.trim());
+        toast.success("Password reset request submitted successfully.");
+      } else {
+        toast.error(res.error || "Failed to process password reset request.");
+      }
+      return;
+    }
+
+    if (mode === "signup") {
+      if (!name || !name.trim()) {
+        toast.error("Please enter your full name.");
+        return;
+      }
+
+      if (!email || !email.trim()) {
+        toast.error("Please enter a valid work email address.");
+        return;
+      }
+
+      const emailRegex = /^\S+@\S+\.\S+$/;
+      if (!emailRegex.test(email.trim())) {
+        toast.error("Please enter a valid work email address format.");
+        return;
+      }
+
+      setBusy(true);
+
+      const res = await registerUser({
+        name: name.trim(),
+        email: email.trim(),
+        role: selectedRole,
+      });
+
+      setBusy(false);
+
+      if (res.success) {
+        setRegisteredEmailSuccess(res.email || email.trim());
+        toast.success("Account registration initiated successfully!");
+      } else {
+        toast.error(res.error || "Registration failed. Please check your inputs.");
+      }
     } else {
-      performLogin("admin", email || "venkatesh.k@normiloans.com", name || "Venkatesh Kota");
+      // Sign In mode
+      if (!email || !password) {
+        toast.error("Please enter both work email and password.");
+        return;
+      }
+
+      setBusy(true);
+
+      const res = await loginUser({ email: email.trim(), password });
+
+      if (res.success && res.user) {
+        if (res.token) {
+          localStorage.setItem("crm_token", res.token);
+        }
+        performLogin(res.user.role as UserRole, res.user.email, res.user.name);
+      } else {
+        // Check for quick role logins as fallback for demo accounts
+        if (email.includes("praveen") && password === "sales@2026") {
+          performLogin("sales", email, "Praveen K");
+        } else if (email.includes("nikhil") && password === "proc@2026") {
+          performLogin("processing", email, "Nikhil V");
+        } else if (email.includes("swathi") && password === "viewer@2026") {
+          performLogin("viewer", email, "Swathi Sharma");
+        } else if (email.includes("venkatesh") && password === "admin@2026") {
+          performLogin("admin", email, "Venkatesh Kota");
+        } else {
+          setBusy(false);
+          toast.error(res.error || "Invalid credentials or pending registration.");
+        }
+      }
     }
   };
 
@@ -68,11 +155,11 @@ export function AuthPage() {
       {/* Left Branding Side */}
       <div className="hidden flex-col justify-between bg-sidebar p-12 text-sidebar-foreground lg:flex relative overflow-hidden">
         <div className="absolute -right-20 -top-20 size-80 rounded-full bg-primary/10 blur-3xl" />
-        
+
         <Link to="/" className="flex items-center">
           <NormiloansLogo variant="dark" size="xl" showTagline={true} />
         </Link>
-        
+
         <div className="relative z-10 my-auto py-12">
           <span className="inline-block rounded-full bg-primary/20 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-primary border border-primary/30">
             Education Loan Aggregator CRM
@@ -91,148 +178,214 @@ export function AuthPage() {
         </div>
       </div>
 
-      {/* Right Login Form Side */}
+      {/* Right Form Side */}
       <div className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-md surface-card p-8 shadow-xl">
           <div className="mb-6 text-center lg:hidden">
             <NormiloansLogo variant="full-color" size="lg" showTagline={true} className="justify-center" />
           </div>
 
-          <h1 className="text-2xl font-bold text-foreground">
-            {mode === "signin" ? "Sign in to CRM" : "Create team account"}
-          </h1>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Enter your credentials or choose a quick role test login below.
-          </p>
-
-          {/* Quick One-Click Demo Role Accounts */}
-          <div className="mt-5 rounded-xl border border-border bg-muted/40 p-3.5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <KeyRound className="size-3.5 text-primary" /> One-Click Role Logins (Demo Passwords)
-            </p>
-
-            <div className="mt-2.5 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail("venkatesh.k@normiloans.com");
-                  setPassword("admin@2026");
-                  performLogin("admin", "venkatesh.k@normiloans.com", "Venkatesh Kota");
-                }}
-                className="flex items-center gap-2 rounded-lg border border-primary/20 bg-card p-2 text-left text-xs transition-all hover:bg-primary/10 hover:border-primary"
-              >
-                <ShieldCheck className="size-4 shrink-0 text-primary" />
-                <div className="min-w-0">
-                  <p className="font-bold text-foreground truncate">Admin / Owner</p>
-                  <p className="text-[10px] text-muted-foreground">Pass: admin@2026</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail("praveen.k@normiloans.com");
-                  setPassword("sales@2026");
-                  performLogin("sales", "praveen.k@normiloans.com", "Praveen K");
-                }}
-                className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-card p-2 text-left text-xs transition-all hover:bg-blue-500/10 hover:border-blue-500"
-              >
-                <Headphones className="size-4 shrink-0 text-blue-500" />
-                <div className="min-w-0">
-                  <p className="font-bold text-foreground truncate">Sales / Telecaller</p>
-                  <p className="text-[10px] text-muted-foreground">Pass: sales@2026</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail("nikhil.v@normiloans.com");
-                  setPassword("proc@2026");
-                  performLogin("processing", "nikhil.v@normiloans.com", "Nikhil V");
-                }}
-                className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-card p-2 text-left text-xs transition-all hover:bg-emerald-500/10 hover:border-emerald-500"
-              >
-                <FileText className="size-4 shrink-0 text-emerald-500" />
-                <div className="min-w-0">
-                  <p className="font-bold text-foreground truncate">Processing Exec</p>
-                  <p className="text-[10px] text-muted-foreground">Pass: proc@2026</p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail("swathi.s@auditors.com");
-                  setPassword("viewer@2026");
-                  performLogin("viewer", "swathi.s@auditors.com", "Swathi Sharma");
-                }}
-                className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-card p-2 text-left text-xs transition-all hover:bg-amber-500/10 hover:border-amber-500"
-              >
-                <Eye className="size-4 shrink-0 text-amber-500" />
-                <div className="min-w-0">
-                  <p className="font-bold text-foreground truncate">Viewer (Auditor)</p>
-                  <p className="text-[10px] text-muted-foreground">Pass: viewer@2026</p>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <form onSubmit={submit} className="mt-5 space-y-4">
-            {mode === "signup" ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="name">Full name</Label>
-                <Input
-                  id="name"
-                  placeholder="e.g. Praveen Kumar"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
+          {registeredEmailSuccess ? (
+            /* Success Tick Mark UI upon registration */
+            <div className="py-6 text-center space-y-4 animate-in fade-in-50">
+              <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                <CheckCircle2 className="size-9" />
               </div>
-            ) : null}
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Work email</Label>
-              <Input
-                id="email"
-                type="text"
-                placeholder="venkatesh.k@normiloans.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
 
-            <Button type="submit" className="w-full font-semibold shadow-lg shadow-primary/20" disabled={busy}>
-              {busy ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <span className="inline-flex items-center gap-1.5">
-                  {mode === "signin" ? "Sign in to Dashboard" : "Create Account & Enter"}
-                  <ArrowRight className="size-4" />
-                </span>
+              <h2 className="text-2xl font-bold text-foreground">Account registration initiated successfully</h2>
+
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mx-auto">
+                An account activation link has been dispatched to:
+              </p>
+
+              <div className="mx-auto max-w-sm rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center justify-center gap-2 text-xs font-semibold text-primary">
+                <Mail className="size-4 shrink-0" />
+                <span className="truncate">{registeredEmailSuccess}</span>
+              </div>
+
+              <p className="text-xs text-muted-foreground leading-relaxed pt-2">
+                Please check your email inbox and click <strong className="text-foreground">"Set Your Password"</strong> to activate your account.
+              </p>
+
+              <div className="pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full font-semibold"
+                  onClick={() => {
+                    setRegisteredEmailSuccess(null);
+                    setMode("signin");
+                  }}
+                >
+                  Return to Sign In
+                </Button>
+              </div>
+            </div>
+          ) : forgotSuccessEmail ? (
+            /* Email Sent Success Screen for Forgot Password */
+            <div className="py-6 text-center space-y-4 animate-in fade-in-50">
+              <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/30">
+                <CheckCircle2 className="size-9" />
+              </div>
+
+              <h2 className="text-2xl font-bold text-foreground">Check Your Email</h2>
+
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mx-auto">
+                If an account exists for this email address, you will receive a password-reset link shortly.
+              </p>
+
+              <div className="mx-auto max-w-sm rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-center justify-center gap-2 text-xs font-semibold text-primary">
+                <Mail className="size-4 shrink-0" />
+                <span className="truncate">{forgotSuccessEmail}</span>
+              </div>
+
+              <div className="pt-4">
+                <Button
+                  type="button"
+                  className="w-full font-semibold"
+                  onClick={() => {
+                    setForgotSuccessEmail(null);
+                    setMode("signin");
+                  }}
+                >
+                  Back to Login
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold text-foreground">
+                {mode === "signin"
+                  ? "Sign in to CRM"
+                  : mode === "signup"
+                  ? "Create team account"
+                  : "Forgot Password?"}
+              </h1>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {mode === "signin"
+                  ? "Enter your credentials to access your workspace."
+                  : mode === "signup"
+                  ? "Fill in your details below to register your team account."
+                  : "Enter your registered work email address and we'll send you a link to reset your password."}
+              </p>
+
+              <form onSubmit={submit} className="mt-5 space-y-4">
+                {/* Full Name (Registration only) */}
+                {mode === "signup" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="name">Full Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g. Praveen Kumar"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
+
+                {/* Work Email */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Work Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="venkatesh.k@normiloans.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Role Selection Dropdown (Registration only) */}
+                {mode === "signup" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="role">Assigned Role *</Label>
+                    <select
+                      id="role"
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="admin">Admin / Owner (Founder & Managing Director)</option>
+                      <option value="sales">Sales Exec / Telecaller (Sales & Lead Gen)</option>
+                      <option value="processing">Processing Officer (Credit & Operations)</option>
+                      <option value="viewer">External Auditor / Viewer (Read-only)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Password field & Forgot Password Link (Sign In only) */}
+                {mode === "signin" && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password *</Label>
+                      <button
+                        type="button"
+                        onClick={() => setMode("forgot")}
+                        className="text-xs font-semibold text-primary hover:underline"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <Button type="submit" className="w-full font-semibold shadow-lg shadow-primary/20" disabled={busy}>
+                  {busy ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5">
+                      {mode === "signin"
+                        ? "Sign in to Dashboard"
+                        : mode === "signup"
+                        ? "Create Account"
+                        : "Continue"}
+                      <ArrowRight className="size-4" />
+                    </span>
+                  )}
+                </Button>
+
+                {mode === "forgot" && (
+                  <div className="pt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setMode("signin")}
+                      className="inline-flex items-center text-xs font-semibold text-muted-foreground hover:text-foreground"
+                    >
+                      <ArrowLeft className="mr-1 size-3.5" /> Back to Login
+                    </button>
+                  </div>
+                )}
+              </form>
+
+              {mode !== "forgot" && (
+                <p className="mt-5 text-center text-xs text-muted-foreground">
+                  {mode === "signin" ? "Need an account?" : "Already registered?"}{" "}
+                  <button
+                    type="button"
+                    className="font-semibold text-primary hover:underline"
+                    onClick={() => {
+                      setMode(mode === "signin" ? "signup" : "signin");
+                      setRegisteredEmailSuccess(null);
+                      setForgotSuccessEmail(null);
+                    }}
+                  >
+                    {mode === "signin" ? "Create one" : "Sign in"}
+                  </button>
+                </p>
               )}
-            </Button>
-          </form>
-
-          <p className="mt-5 text-center text-xs text-muted-foreground">
-            {mode === "signin" ? "Need an account?" : "Already have access?"}{" "}
-            <button
-              type="button"
-              className="font-semibold text-primary hover:underline"
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            >
-              {mode === "signin" ? "Create one" : "Sign in"}
-            </button>
-          </p>
+            </>
+          )}
         </div>
       </div>
     </div>

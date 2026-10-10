@@ -4,18 +4,18 @@ import { UserPlus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NormiloansLogo } from "@/components/crm/NormiloansLogo";
 
-const NAV_LINKS = [
+const NAV_LINKS: Array<{ label: string; to: "/"; hash?: string }> = [
   { label: "Home", to: "/" },
-  { label: "Features", to: "/features" },
-  { label: "How It Works", to: "/how-it-works" },
-  { label: "Pricing", to: "/pricing" },
-  { label: "About Us", to: "/about" },
-  { label: "Contact", to: "/contact" },
+  { label: "Features", to: "/", hash: "features" },
+  { label: "How It Works", to: "/", hash: "how-it-works" },
+  { label: "About Us", to: "/", hash: "about" },
+  { label: "Contact", to: "/", hash: "contact" },
 ];
 
 export function PublicHeader() {
   const location = useLocation();
   const currentPath = location.pathname;
+  const currentHash = location.hash;
 
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between px-6 py-4 md:px-12 bg-white/95 backdrop-blur-md border-b border-[#DDE5F0] shadow-sm">
@@ -26,11 +26,14 @@ export function PublicHeader() {
       {/* Navigation Menu */}
       <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-[#64748B]">
         {NAV_LINKS.map((link) => {
-          const isActive = currentPath === link.to;
+          const isActive =
+            currentPath === "/" &&
+            (!link.hash ? !currentHash || currentHash === "#" : currentHash === `#${link.hash}`);
           return (
             <Link
-              key={link.to}
+              key={link.label}
               to={link.to}
+              hash={link.hash}
               className={`transition-colors hover:text-[#F26500] ${
                 isActive ? "text-[#F26500] font-semibold underline underline-offset-8" : ""
               }`}
@@ -90,10 +93,10 @@ export function PublicFooter() {
         <div className="space-y-3">
           <p className="text-xs font-bold uppercase tracking-wider text-[#0F2237]">Company</p>
           <ul className="space-y-2">
-            <li><Link to="/about" className="hover:text-[#F26500] transition-colors">About Us</Link></li>
-            <li><Link to="/how-it-works" className="hover:text-[#F26500] transition-colors">How It Works</Link></li>
-            <li><Link to="/features" className="hover:text-[#F26500] transition-colors">Features & Workflow</Link></li>
-            <li><Link to="/contact" className="hover:text-[#F26500] transition-colors">Contact Us</Link></li>
+            <li><Link to="/" hash="about" className="hover:text-[#F26500] transition-colors">About Us</Link></li>
+            <li><Link to="/" hash="how-it-works" className="hover:text-[#F26500] transition-colors">How It Works</Link></li>
+            <li><Link to="/" hash="features" className="hover:text-[#F26500] transition-colors">Features & Workflow</Link></li>
+            <li><Link to="/" hash="contact" className="hover:text-[#F26500] transition-colors">Contact Us</Link></li>
           </ul>
         </div>
 
@@ -103,7 +106,7 @@ export function PublicFooter() {
           <ul className="space-y-2">
             <li><Link to="/student-registration" className="hover:text-[#F26500] transition-colors">Student Loan Application</Link></li>
             <li><Link to="/auth" className="hover:text-[#F26500] transition-colors">Sign in to CRM Workspace</Link></li>
-            <li><Link to="/pricing" className="hover:text-[#F26500] transition-colors">Partner Engagement</Link></li>
+            <li><Link to="/" hash="contact" className="hover:text-[#F26500] transition-colors">Partner Engagement</Link></li>
           </ul>
         </div>
 
