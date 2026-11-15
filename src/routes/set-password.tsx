@@ -18,8 +18,8 @@ export const Route = createFileRoute("/set-password")({
   }),
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      token: (search.token as string) || "",
-      email: (search.email as string) || "",
+      token: (search["token"] as string) || "",
+      email: (search["email"] as string) || "",
     };
   },
   component: SetPasswordPage,

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowUpRight,
@@ -12,16 +13,34 @@ import {
   Headphones,
   FileText,
   Eye,
+  Share2,
 } from "lucide-react";
 
 import { AppShell, StageBadge, StatCard } from "@/components/crm/AppShell";
 import { Button } from "@/components/ui/button";
 import { CASES, FUNNEL, LENDERS, MONTHLY, formatLakh, formatINR } from "@/lib/demo-data";
 import { useAuth } from "@/lib/auth-context";
+import { useCases } from "@/lib/cases-context";
+import {
+  calculateDocProgress,
+  getEffectiveFollowUpStatus,
+  isFollowUpDueToday,
+  formatDateTime,
+} from "@/lib/sales-workflow-types";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { StudentRegistrationModal } from "@/components/crm/StudentRegistrationModal";
-import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Dashboard | Normiloans CRM" },
@@ -35,12 +54,16 @@ function RoleBasedDashboard() {
   const { role, user } = useAuth();
   const [addLeadOpen, setAddLeadOpen] = useState(false);
 
+  const safeRole = role && ["admin", "sales", "processing", "viewer"].includes(role) ? role : "admin";
+  const safeName = user?.name || "Staff User";
+  const safeTitle = user?.roleTitle || "Loan Officer";
+
   return (
     <AppShell
-      title={`Welcome back, ${user.name}`}
-      subtitle={`Role: ${user.roleTitle} · Hyderabad, Telangana`}
+      title={`Welcome back, ${safeName}`}
+      subtitle={`Role: ${safeTitle} · Hyderabad, Telangana`}
       action={
-        role !== "viewer" ? (
+        safeRole !== "viewer" ? (
           <Button
             size="sm"
             className="font-semibold shadow-md shadow-primary/20"
@@ -52,10 +75,10 @@ function RoleBasedDashboard() {
       }
     >
       {/* Role specific dashboard rendering */}
-      {role === "admin" && <AdminDashboard />}
-      {role === "sales" && <SalesDashboard />}
-      {role === "processing" && <ProcessingDashboard />}
-      {role === "viewer" && <ViewerDashboard />}
+      {safeRole === "admin" && <AdminDashboard />}
+      {safeRole === "sales" && <SalesDashboard />}
+      {safeRole === "processing" && <ProcessingDashboard />}
+      {safeRole === "viewer" && <ViewerDashboard />}
 
       <StudentRegistrationModal open={addLeadOpen} onOpenChange={setAddLeadOpen} />
     </AppShell>
@@ -133,13 +156,15 @@ function SanctionedVsDisbursedAnalytics() {
    1. ADMIN / OWNER DASHBOARD
    ========================================================================= */
 function AdminDashboard() {
-  const maxFunnel = FUNNEL[0]!.count;
+  const { cases } = useCases();
+  const validCases = Array.isArray(cases) ? cases.filter(Boolean) : [];
+  const maxFunnel = FUNNEL && FUNNEL[0] ? FUNNEL[0].count : 100;
 
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Active Cases" value="61" hint="+8 added this week" />
+        <StatCard label="Total Active Cases" value={String(validCases.length || 61)} hint="+8 added this week" />
         <StatCard label="Sanctioned Value" value="₹9.6 Cr" hint="38 files sanctioned" accent />
         <StatCard label="Disbursed Value" value="₹7.1 Cr" hint="24 files disbursed" />
         <StatCard label="Commission Earned" value="₹11.4 L" hint="₹3.2 L pending receipt" />
@@ -182,11 +207,11 @@ function AdminDashboard() {
             </Link>
           </div>
           <ul className="divide-y divide-border">
-            {CASES.slice(0, 5).map((c) => (
+            {validCases.slice(0, 5).map((c) => (
               <li key={c.id}>
                 <Link
                   to="/cases/$caseId"
-                  params={{ caseId: c.id }}
+                  params={{ caseId: String(c.id || "NL-1041") }}
                   className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 transition-colors hover:bg-[#EDF3FD]/80"
                 >
                   <div className="min-w-0">
@@ -230,73 +255,200 @@ function AdminDashboard() {
    2. SALES / TELECALLER DASHBOARD
    ========================================================================= */
 function SalesDashboard() {
-  const salesLeads = CASES.filter((c) => c.owner.includes("Praveen") || c.stage === "New Lead" || c.stage === "Contacted");
+  const { cases, completeFollowUp } = useCases();
+  const { user } = useAuth();
+
+  const [filterInterest, setFilterInterest] = useState<string>("All");
+
+  // Complete Dialog on Dashboard
+  const [completeOpen, setCompleteOpen] = useState(false);
+  const [activeFollowUp, setActiveFollowUp] = useState<{ caseId: string; followUpId: string; student: string } | null>(null);
+  const [outcomeNote, setOutcomeNote] = useState("");
+
+  const validCases = Array.isArray(cases) ? cases.filter(Boolean) : [];
+
+  const salesLeads = validCases.filter(
+    (c) => (c.owner && c.owner.includes("Praveen")) || c.stage === "New Lead" || c.stage === "Contacted"
+  );
+
+  // Dynamic KPI calculations
+  const myAssignedCount = salesLeads.length;
+  const newLeadsCount = validCases.filter(
+    (c) => c.stage === "New Lead" || c.interestStatus === "Not Contacted"
+  ).length;
+  const interestedCount = validCases.filter((c) => c.interestStatus === "Interested").length;
+  const notInterestedCount = validCases.filter((c) => c.interestStatus === "Not Interested").length;
+
+  // Flatten follow-ups
+  const allFollowUps = validCases.flatMap((c) =>
+    (Array.isArray(c.followUps) ? c.followUps : []).filter(Boolean).map((f) => ({
+      ...f,
+      caseId: c.id || "",
+      studentName: c.student || "Student",
+      phone: c.phone || "—",
+      course: `${c.course || "Course"} · ${c.country || ""}`,
+      effectiveStatus: getEffectiveFollowUpStatus(f),
+      isDueToday: isFollowUpDueToday(f.scheduledAt),
+    }))
+  );
+
+  const overdueFollowUps = allFollowUps.filter((f) => f.effectiveStatus === "Overdue");
+  const dueTodayFollowUps = allFollowUps.filter(
+    (f) => (f.isDueToday || f.effectiveStatus === "Overdue") && f.status !== "Completed" && f.status !== "Cancelled"
+  );
+
+  const docsPendingCount = validCases.filter((c) => {
+    if (c.interestStatus !== "Interested" || c.handover?.isHandedOver) return false;
+    const p = calculateDocProgress(c.workflowDocuments);
+    return !p.isComplete;
+  }).length;
+
+  const readyForHandoverCount = validCases.filter((c) => {
+    if (c.interestStatus !== "Interested" || c.handover?.isHandedOver) return false;
+    const p = calculateDocProgress(c.workflowDocuments);
+    return p.isComplete;
+  }).length;
+
+  const handedOverCount = validCases.filter((c) => c.handover?.isHandedOver).length;
+
+  const handleOpenCompleteModal = (caseId: string, followUpId: string, student: string) => {
+    setActiveFollowUp({ caseId, followUpId, student });
+    setOutcomeNote("");
+    setCompleteOpen(true);
+  };
+
+  const handleConfirmDashboardComplete = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeFollowUp) return;
+
+    completeFollowUp(activeFollowUp.caseId, activeFollowUp.followUpId, {
+      completionNote: outcomeNote.trim() || "Call completed via sales dashboard.",
+      authorName: user?.name || "Praveen K",
+    });
+
+    setCompleteOpen(false);
+    setActiveFollowUp(null);
+  };
+
+  const filteredPipelineLeads = salesLeads.filter((c) => {
+    if (filterInterest === "All") return true;
+    if (filterInterest === "Interested") return c.interestStatus === "Interested";
+    if (filterInterest === "Follow-up Required") return c.interestStatus === "Follow-up Required";
+    if (filterInterest === "Not Interested") return c.interestStatus === "Not Interested";
+    if (filterInterest === "Not Contacted") return c.interestStatus === "Not Contacted";
+    if (filterInterest === "Docs Pending") {
+      return c.interestStatus === "Interested" && !calculateDocProgress(c.workflowDocuments).isComplete;
+    }
+    if (filterInterest === "Ready for Handover") {
+      return c.interestStatus === "Interested" && calculateDocProgress(c.workflowDocuments).isComplete && !c.handover?.isHandedOver;
+    }
+    if (filterInterest === "Handed Over") return c.handover?.isHandedOver;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
-      {/* Sales KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="My Assigned Leads" value="18" hint="Active in my bucket" />
-        <StatCard label="New Leads Today" value="6" hint="Requires qualification" accent />
-        <StatCard label="Follow-ups Due" value="4" hint="Scheduled for today" />
-        <StatCard label="Qualified Cases" value="7" hint="Sent to processing" />
-        <StatCard label="Converted / Sanctioned" value="5" hint="Total 100% converted" />
+      {/* Sales Dynamic KPIs Grid (9 Cards) */}
+      <div className="grid gap-3.5 grid-cols-2 sm:grid-cols-3 xl:grid-cols-5">
+        <StatCard label="My Assigned Leads" value={String(myAssignedCount)} hint="Active in my bucket" />
+        <StatCard label="New Leads" value={String(newLeadsCount)} hint="Requires qualification" accent />
+        <StatCard label="Interested Students" value={String(interestedCount)} hint="Document stage active" />
+        <StatCard label="Follow-ups Due Today" value={String(dueTodayFollowUps.length)} hint="Calls scheduled" />
+        <StatCard label="Overdue Follow-ups" value={String(overdueFollowUps.length)} hint={overdueFollowUps.length > 0 ? "Immediate action required" : "All up to date"} accent={overdueFollowUps.length > 0} />
+        <StatCard label="Documents Pending" value={String(docsPendingCount)} hint="Partially collected" />
+        <StatCard label="Ready for Handover" value={String(readyForHandoverCount)} hint="100% docs collected" accent={readyForHandoverCount > 0} />
+        <StatCard label="Handed Over" value={String(handedOverCount)} hint="Transferred to Processing" />
+        <StatCard label="Not Interested" value={String(notInterestedCount)} hint="Reactivation available" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Follow-up Queue Due Today */}
-        <section className="surface-card p-6 lg:col-span-2">
+        <section className="surface-card p-6 border-2 border-border rounded-xl lg:col-span-2">
           <div className="flex items-center justify-between border-b border-border pb-4">
             <div>
-              <h2 className="text-base font-semibold flex items-center gap-2">
-                <Clock className="size-4 text-primary" /> Follow-ups Due Today
+              <h2 className="text-base font-bold flex items-center gap-2 text-foreground">
+                <Clock className="size-4 text-primary" /> Follow-ups Queue & Reminders
               </h2>
-              <p className="text-xs text-muted-foreground">Call scheduled for student qualification & document reminders</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Calls scheduled for student qualification & document collection reminders
+              </p>
             </div>
             <span className="rounded-full bg-primary/15 px-2.5 py-1 text-xs font-bold text-primary">
-              4 Calls Due
+              {dueTodayFollowUps.length} Calls Pending
             </span>
           </div>
 
           <div className="mt-4 divide-y divide-border">
-            {[
-              { id: "NL-1041", name: "Sai Charan Reddy", phone: "+91 98490 21188", course: "MS CS · USA", time: "10:30 AM", note: "Collect missing 6-month bank statement of father" },
-              { id: "NL-1052", name: "Mohammed Arshad", phone: "+91 91234 55780", course: "PG Diploma · Canada", time: "11:45 AM", note: "Discuss Auxilo NBFC rate of interest offer" },
-              { id: "NL-1049", name: "Vikramaditya Rao", phone: "+91 94401 88921", course: "UG Medicine · Georgia", time: "02:15 PM", note: "Send property valuation checklist to parent" },
-              { id: "NL-1035", name: "Deepika Sharma", phone: "+91 99880 12345", course: "MS Biotech · Germany", time: "04:00 PM", note: "Follow up on GRE score card scan upload" },
-            ].map((item) => (
+            {dueTodayFollowUps.slice(0, 5).map((item) => (
               <div key={item.id} className="py-3.5 flex flex-wrap items-center justify-between gap-3">
-                <div>
+                <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-sm">{item.name}</p>
+                    <Link
+                      to="/cases/$caseId"
+                      params={{ caseId: String(item.caseId || "NL-1041") }}
+                      className="font-bold text-sm text-foreground hover:text-primary transition-colors"
+                    >
+                      {item.studentName}
+                    </Link>
                     <span className="text-xs text-muted-foreground">({item.course})</span>
+                    {item.effectiveStatus === "Overdue" && (
+                      <span className="rounded bg-rose-600 px-1.5 py-0.2 text-[10px] font-extrabold text-white">
+                        OVERDUE
+                      </span>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{item.phone} · <strong className="text-foreground">{item.time}</strong></p>
-                  <p className="text-xs text-primary font-medium mt-1">Note: {item.note}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {item.phone} · <strong className="text-foreground">{formatDateTime(item.scheduledAt)}</strong>
+                  </p>
+                  <p className="text-xs text-primary font-medium mt-1">
+                    Agenda: {item.reminderNote}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" className="text-xs font-semibold text-primary border-primary/40 hover:bg-primary/10">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs font-semibold text-primary border-primary/40 hover:bg-primary/10"
+                    onClick={() => toast.success(`Simulating call to ${item.studentName} (${item.phone})...`)}
+                  >
                     <PhoneCall className="mr-1.5 size-3.5" /> Call Student
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                    onClick={() => handleOpenCompleteModal(item.caseId, item.id, item.studentName)}
+                  >
+                    <CheckCircle2 className="mr-1.5 size-3.5" /> Mark Done
                   </Button>
                 </div>
               </div>
             ))}
+
+            {dueTodayFollowUps.length === 0 && (
+              <div className="py-8 text-center text-xs text-muted-foreground">
+                ✓ No calls scheduled for today or overdue. All follow-ups completed!
+              </div>
+            )}
           </div>
         </section>
 
         {/* Sales Target & Conversion Tracker */}
-        <section className="surface-card p-6">
-          <h2 className="text-base font-semibold">Monthly Lead Target</h2>
+        <section className="surface-card p-6 border-2 border-border rounded-xl">
+          <h2 className="text-base font-bold text-foreground">Monthly Lead Target</h2>
           <p className="text-xs text-muted-foreground">Target: 25 Qualified Submissions</p>
           <div className="mt-6 flex flex-col items-center justify-center text-center">
             <div className="relative flex size-36 items-center justify-center rounded-full border-8 border-primary/20 border-t-primary">
               <div>
-                <p className="stat-figure text-3xl">72%</p>
-                <p className="text-[11px] font-semibold text-muted-foreground">18 / 25 Cases</p>
+                <p className="stat-figure text-3xl font-extrabold">
+                  {Math.round((myAssignedCount / 25) * 100)}%
+                </p>
+                <p className="text-[11px] font-semibold text-muted-foreground">
+                  {myAssignedCount} / 25 Cases
+                </p>
               </div>
             </div>
             <p className="mt-4 text-xs font-medium text-muted-foreground">
-              7 more qualified leads needed to hit monthly performance bonus.
+              {Math.max(0, 25 - myAssignedCount)} more qualified leads needed to hit monthly performance bonus.
             </p>
           </div>
         </section>
@@ -305,51 +457,185 @@ function SalesDashboard() {
       {/* Sanctioned vs Disbursed Analytics */}
       <SanctionedVsDisbursedAnalytics />
 
-      {/* My Leads List */}
-      <section className="surface-card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <h2 className="text-base font-semibold">My Active Pipeline & Leads</h2>
-          <Link to="/leads" className="text-xs font-semibold text-primary hover:underline">
+      {/* My Active Pipeline & Leads with Interest Filter */}
+      <section className="surface-card overflow-hidden border-2 border-border rounded-xl shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border px-6 py-4 gap-3">
+          <div>
+            <h2 className="text-base font-bold text-foreground">My Active Pipeline & Leads</h2>
+            <p className="text-xs text-muted-foreground">Track student interest, follow-up status, and collection progress</p>
+          </div>
+          <Link to="/leads" className="text-xs font-bold text-primary hover:underline">
             View full pipeline →
           </Link>
         </div>
+
+        {/* Quick Filter Tabs */}
+        <div className="px-6 py-2.5 bg-muted/40 border-b border-border flex flex-wrap gap-1.5">
+          {[
+            "All",
+            "Interested",
+            "Follow-up Required",
+            "Docs Pending",
+            "Ready for Handover",
+            "Handed Over",
+            "Not Interested",
+            "Not Contacted",
+          ].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setFilterInterest(tab)}
+              className={`px-3 py-1 text-xs rounded-full transition-all font-semibold ${
+                filterInterest === tab
+                  ? "bg-primary text-white shadow-xs font-bold"
+                  : "bg-card text-muted-foreground hover:bg-muted border border-border"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-sm">
-            <thead className="bg-secondary/70 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <table className="w-full min-w-[750px] text-sm">
+            <thead className="bg-[#EDF3FD] text-left text-xs uppercase tracking-wide text-[#0F2237] border-b border-[#DDE5F0]">
               <tr>
-                <th className="px-5 py-3 font-medium">Student / Case ID</th>
-                <th className="px-5 py-3 font-medium">Target Destination</th>
-                <th className="px-5 py-3 font-medium">Requirement</th>
-                <th className="px-5 py-3 font-medium">Stage</th>
-                <th className="px-5 py-3 font-medium">Action</th>
+                <th className="px-5 py-3 font-bold">Student / Case ID</th>
+                <th className="px-5 py-3 font-bold">Target Destination</th>
+                <th className="px-5 py-3 font-bold">Requirement</th>
+                <th className="px-5 py-3 font-bold">Interest Status</th>
+                <th className="px-5 py-3 font-bold">Doc Progress</th>
+                <th className="px-5 py-3 font-bold">Handover</th>
+                <th className="px-5 py-3 font-bold text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {salesLeads.map((c) => (
-                <tr key={c.id} className="transition-colors hover:bg-secondary/50">
-                  <td className="px-5 py-3.5 font-medium">
-                    <Link to="/cases/$caseId" params={{ caseId: c.id }} className="hover:text-primary">
-                      {c.student}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">{c.id} · {c.source}</p>
-                  </td>
-                  <td className="px-5 py-3.5 text-xs">
-                    <p className="font-medium text-foreground">{c.course}</p>
-                    <p className="text-muted-foreground">{c.country} · {c.university}</p>
-                  </td>
-                  <td className="px-5 py-3.5 stat-figure">{formatLakh(c.amount)}</td>
-                  <td className="px-5 py-3.5"><StageBadge stage={c.stage} /></td>
-                  <td className="px-5 py-3.5">
-                    <Button size="sm" variant="ghost" asChild className="text-xs text-primary">
-                      <Link to="/cases/$caseId" params={{ caseId: c.id }}>Update</Link>
-                    </Button>
+            <tbody className="divide-y divide-[#DDE5F0]">
+              {filteredPipelineLeads.map((c) => {
+                const docP = calculateDocProgress(c.workflowDocuments);
+                const isHanded = c.handover?.isHandedOver ?? false;
+
+                return (
+                  <tr key={c.id} className="transition-colors hover:bg-muted/40">
+                    <td className="px-5 py-3.5 font-medium">
+                      <Link to="/cases/$caseId" params={{ caseId: String(c.id || "NL-1041") }} className="hover:text-primary font-bold text-foreground">
+                        {c.student}
+                      </Link>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-muted-foreground">{c.id}</span>
+                        <span className="text-muted-foreground/40">·</span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                          <Share2 className="size-2.5 text-blue-600" /> {c.source || "Website inquiry form"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 text-xs">
+                      <p className="font-semibold text-foreground">{c.course}</p>
+                      <p className="text-muted-foreground">{c.country} · {c.university}</p>
+                    </td>
+                    <td className="px-5 py-3.5 stat-figure font-bold">{formatLakh(c.amount)}</td>
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold border ${
+                          c.interestStatus === "Interested"
+                            ? "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
+                            : c.interestStatus === "Follow-up Required"
+                            ? "bg-amber-500/15 text-amber-700 border-amber-500/30"
+                            : c.interestStatus === "Not Interested"
+                            ? "bg-rose-500/15 text-rose-700 border-rose-500/30"
+                            : "bg-slate-500/15 text-slate-700 border-slate-500/30"
+                        }`}
+                      >
+                        {c.interestStatus || "Not Contacted"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-foreground">
+                          {docP.received}/{docP.total}
+                        </span>
+                        <div className="w-16 h-2 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full ${docP.isComplete ? "bg-emerald-600" : "bg-primary"}`}
+                            style={{ width: `${docP.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {isHanded ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-700 px-2 py-0.5 text-[11px] font-bold border border-emerald-500/30">
+                          <CheckCircle2 className="size-3" /> Handed Over
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">In Sales</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <Button size="sm" variant="ghost" asChild className="text-xs font-bold text-primary">
+                        <Link to="/cases/$caseId" params={{ caseId: String(c.id || "NL-1041") }}>Manage →</Link>
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {filteredPipelineLeads.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-5 py-8 text-center text-xs text-muted-foreground">
+                    No leads match this interest filter.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
       </section>
+
+      {/* MODAL: Complete Follow-up from Dashboard */}
+      <Dialog open={completeOpen} onOpenChange={setCompleteOpen}>
+        <DialogContent className="max-w-md border-border bg-card shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <CheckCircle2 className="size-5 text-emerald-600" /> Complete Follow-up Call
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Student: <strong>{activeFollowUp?.student}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleConfirmDashboardComplete} className="space-y-4 pt-2">
+            <div>
+              <Label className="text-xs font-bold text-foreground">
+                Call Summary / Notes
+              </Label>
+              <Textarea
+                placeholder="What was discussed? (e.g. Student confirmed interest, collecting salary slips, scheduled next call...)"
+                value={outcomeNote}
+                onChange={(e) => setOutcomeNote(e.target.value)}
+                className="mt-1 text-xs min-h-[85px]"
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCompleteOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              >
+                Save & Complete
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -466,7 +752,7 @@ function ProcessingDashboard() {
               {CASES.filter((c) => c.stage === "Docs Collected" || c.stage === "Sent to Lender").map((c) => (
                 <tr key={c.id} className="transition-colors hover:bg-secondary/50">
                   <td className="px-5 py-3.5 font-medium">
-                    <Link to="/cases/$caseId" params={{ caseId: c.id }} className="hover:text-primary">
+                    <Link to="/cases/$caseId" params={{ caseId: String(c.id || "NL-1041") }} className="hover:text-primary">
                       {c.student}
                     </Link>
                     <p className="text-xs text-muted-foreground">{c.id}</p>
@@ -496,7 +782,7 @@ function ProcessingDashboard() {
    4. VIEWER / AUDITOR DASHBOARD (READ-ONLY)
    ========================================================================= */
 function ViewerDashboard() {
-  const maxFunnel = FUNNEL[0]!.count;
+  const maxFunnel = FUNNEL && FUNNEL[0] ? FUNNEL[0].count : 100;
 
   return (
     <div className="space-y-6">

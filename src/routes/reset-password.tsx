@@ -18,8 +18,8 @@ export const Route = createFileRoute("/reset-password")({
   }),
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      token: (search.token as string) || "",
-      email: (search.email as string) || "",
+      token: (search["token"] as string) || "",
+      email: (search["email"] as string) || "",
     };
   },
   component: ResetPasswordPage,

@@ -1,15 +1,23 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, UserPlus, Filter, ArrowRight } from "lucide-react";
+import { Search, UserPlus, Filter, ArrowRight, Clock, CheckCircle2, AlertCircle, Share2 } from "lucide-react";
 
 import { AppShell, StageBadge } from "@/components/crm/AppShell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CASES, STAGES, formatLakh } from "@/lib/demo-data";
+import { STAGES, formatLakh, REFERRAL_SOURCES } from "@/lib/demo-data";
 import { StudentRegistrationModal } from "@/components/crm/StudentRegistrationModal";
 import { useAuth } from "@/lib/auth-context";
+import { useCases } from "@/lib/cases-context";
+import {
+  calculateDocProgress,
+  getEffectiveFollowUpStatus,
+  isFollowUpDueToday,
+  formatDateTime,
+} from "@/lib/sales-workflow-types";
 
 export const Route = createFileRoute("/_authenticated/leads")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Leads & Cases | Normiloans CRM" },
@@ -22,29 +30,77 @@ export const Route = createFileRoute("/_authenticated/leads")({
 function Leads() {
   const navigate = useNavigate();
   const { role, user, hasPerm } = useAuth();
+  const { cases } = useCases();
+
   const [query, setQuery] = useState("");
   const [stage, setStage] = useState<string>("All");
+  const [workflowFilter, setWorkflowFilter] = useState<string>("All");
+  const [sourceFilter, setSourceFilter] = useState<string>("All");
   const [myFilter, setMyFilter] = useState<boolean>(role === "sales" || role === "processing");
   const [addLeadOpen, setAddLeadOpen] = useState(false);
 
   const rows = useMemo(() => {
-    return CASES.filter((c) => {
+    return cases.filter((c) => {
+      // 1. Stage Filter
       if (stage !== "All" && c.stage !== stage) return false;
 
-      // Ownership filter for sales/processing
-      if (myFilter) {
-        if (role === "sales") {
-          return c.owner.includes("Praveen") || c.stage === "New Lead" || c.stage === "Contacted";
+      // 1b. Referral / Lead Source Filter
+      if (sourceFilter !== "All" && c.source !== sourceFilter) return false;
+
+      // 2. Workflow Filter
+      if (workflowFilter !== "All") {
+        if (workflowFilter === "Interested" && c.interestStatus !== "Interested") return false;
+        if (workflowFilter === "Not Interested" && c.interestStatus !== "Not Interested") return false;
+        if (workflowFilter === "Follow-up Required" && c.interestStatus !== "Follow-up Required") return false;
+        if (workflowFilter === "Not Contacted" && c.interestStatus !== "Not Contacted") return false;
+        if (workflowFilter === "Handed Over" && !c.handover?.isHandedOver) return false;
+
+        if (workflowFilter === "Follow-ups Due") {
+          const hasDue = (c.followUps || []).some(
+            (f) =>
+              (isFollowUpDueToday(f.scheduledAt) || getEffectiveFollowUpStatus(f) === "Overdue") &&
+              f.status !== "Completed" &&
+              f.status !== "Cancelled"
+          );
+          if (!hasDue) return false;
         }
-        if (role === "processing") {
-          return c.stage === "Docs Collected" || c.stage === "Sent to Lender" || c.stage === "Logged In";
+
+        if (workflowFilter === "Docs Pending") {
+          const isPending =
+            c.interestStatus === "Interested" &&
+            !c.handover?.isHandedOver &&
+            !calculateDocProgress(c.workflowDocuments).isComplete;
+          if (!isPending) return false;
+        }
+
+        if (workflowFilter === "Ready for Handover") {
+          const isReady =
+            c.interestStatus === "Interested" &&
+            !c.handover?.isHandedOver &&
+            calculateDocProgress(c.workflowDocuments).isComplete;
+          if (!isReady) return false;
         }
       }
 
+      // 3. Ownership filter for sales/processing
+      if (myFilter) {
+        if (role === "sales") {
+          return (c.owner && c.owner.includes("Praveen")) || c.stage === "New Lead" || c.stage === "Contacted";
+        }
+        if (role === "processing") {
+          return c.stage === "Docs Collected" || c.stage === "Sent to Lender" || c.stage === "Logged In" || c.handover?.isHandedOver;
+        }
+      }
+
+      // 4. Search Query
       const q = query.toLowerCase();
-      return `${c.student} ${c.id} ${c.university} ${c.lender} ${c.owner}`.toLowerCase().includes(q);
+      return (
+        `${c.student} ${c.id} ${c.university} ${c.lender} ${c.owner} ${c.phone} ${c.interestStatus || ""}`
+          .toLowerCase()
+          .includes(q)
+      );
     });
-  }, [query, stage, myFilter, role]);
+  }, [cases, query, stage, workflowFilter, sourceFilter, myFilter, role]);
 
   const canCreateLead = hasPerm("leads:create");
 
@@ -64,16 +120,30 @@ function Leads() {
         ) : undefined
       }
     >
-      <div className="surface-card p-4">
+      <div className="surface-card p-5 border-2 border-border rounded-xl">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search student, case ID, lender or executive"
-              className="pl-9 border-2 border-[#CBD5E1]"
+              placeholder="Search by student name, phone, case ID, interest status, lender..."
+              className="pl-9 border-2 border-border"
             />
+          </div>
+
+          <div className="flex items-center gap-1.5 rounded-lg border-2 border-border bg-card px-2.5 py-1.5 text-xs shadow-2xs">
+            <Share2 className="size-3.5 text-primary shrink-0" />
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="bg-transparent text-xs font-semibold text-foreground focus:outline-hidden cursor-pointer"
+            >
+              <option value="All">All Referral Sources</option>
+              {REFERRAL_SOURCES.map((src) => (
+                <option key={src} value={src}>{src}</option>
+              ))}
+            </select>
           </div>
 
           {(role === "sales" || role === "processing") && (
@@ -83,93 +153,248 @@ function Leads() {
               onClick={() => setMyFilter(!myFilter)}
               className={
                 myFilter
-                  ? "bg-[#F26500] text-white hover:bg-[#E05B00] font-semibold shadow-xs border-2 border-[#F26500]"
-                  : "border-2 border-[#CBD5E1] bg-white text-[#0F2237] hover:bg-[#F1F5F9] font-semibold transition-colors"
+                  ? "bg-primary text-white hover:bg-primary/90 font-semibold shadow-xs border-2 border-primary"
+                  : "border-2 border-border bg-card text-foreground hover:bg-muted font-semibold transition-colors"
               }
             >
-              <Filter className={`mr-1.5 size-3.5 ${myFilter ? "text-white" : "text-[#0F2237]"}`} />
+              <Filter className={`mr-1.5 size-3.5 ${myFilter ? "text-white" : "text-foreground"}`} />
               {myFilter ? (role === "sales" ? "Showing My Assigned Leads" : "Showing My Processing Queue") : "Show All Pipeline Cases"}
             </Button>
           )}
         </div>
 
-        {/* Stage Filter Tabs */}
-        <div className="mt-3.5 flex flex-wrap gap-2 pt-2.5 border-t-2 border-[#CBD5E1]">
-          {["All", ...STAGES].map((s) => (
-            <button
-              key={s}
-              onClick={() => setStage(s)}
-              className={`rounded-full px-3.5 py-1.5 text-xs transition-all ${
-                stage === s
-                  ? "bg-[#F26500] text-white font-extrabold shadow-xs border-2 border-[#F26500]"
-                  : "bg-white text-[#0F2237] border-2 border-[#CBD5E1] font-semibold hover:bg-[#F1F5F9] hover:border-[#94A3B8]"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+        {/* Workflow Filters */}
+        <div className="mt-3.5 pt-3 border-t-2 border-border flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Sales Workflow Filter:
+            </span>
+            {(workflowFilter !== "All" || stage !== "All" || sourceFilter !== "All") && (
+              <button
+                onClick={() => {
+                  setWorkflowFilter("All");
+                  setStage("All");
+                  setSourceFilter("All");
+                }}
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Reset filters
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              "All",
+              "Interested",
+              "Follow-ups Due",
+              "Follow-up Required",
+              "Docs Pending",
+              "Ready for Handover",
+              "Handed Over",
+              "Not Interested",
+              "Not Contacted",
+            ].map((wf) => (
+              <button
+                key={wf}
+                onClick={() => setWorkflowFilter(wf)}
+                className={`rounded-full px-3 py-1 text-xs font-bold transition-all border ${
+                  workflowFilter === wf
+                    ? "bg-primary text-white border-primary shadow-xs"
+                    : "bg-card text-foreground border-border hover:bg-muted"
+                }`}
+              >
+                {wf}
+              </button>
+            ))}
+          </div>
+
+          {/* Stage Filter Tabs */}
+          <div className="pt-2 flex flex-wrap gap-1.5 border-t border-border/60">
+            <span className="text-[11px] font-bold text-muted-foreground self-center mr-1">
+              Stage:
+            </span>
+            {["All", ...STAGES].map((s) => (
+              <button
+                key={s}
+                onClick={() => setStage(s)}
+                className={`rounded-md px-2.5 py-0.5 text-[11px] transition-all font-semibold ${
+                  stage === s
+                    ? "bg-[#1E3A5F] text-white font-bold shadow-xs"
+                    : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="surface-card mt-5 overflow-hidden">
+      {/* Main Table */}
+      <div className="surface-card mt-5 overflow-hidden border-2 border-border rounded-xl shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[880px] text-sm">
+          <table className="w-full min-w-[1280px] text-sm">
             <thead className="bg-[#EDF3FD] text-left text-xs uppercase tracking-wide text-[#0F2237] border-b border-[#DDE5F0]">
               <tr>
-                <th className="px-5 py-3.5 font-bold">Case</th>
-                <th className="px-5 py-3.5 font-bold">Destination & course</th>
-                <th className="px-5 py-3.5 font-bold">Requirement</th>
-                <th className="px-5 py-3.5 font-bold">Lender</th>
-                <th className="px-5 py-3.5 font-bold">Owner</th>
-                <th className="px-5 py-3.5 font-bold">Stage</th>
-                <th className="px-5 py-3.5 font-bold text-right">Action</th>
+                <th className="px-5 py-3.5 font-bold whitespace-nowrap">Case & Contact</th>
+                <th className="px-5 py-3.5 font-bold whitespace-nowrap">Destination & course</th>
+                <th className="px-5 py-3.5 font-bold whitespace-nowrap">Requirement</th>
+                <th className="px-5 py-3.5 font-bold whitespace-nowrap">Lender Partner</th>
+                <th className="px-5 py-3.5 font-bold whitespace-nowrap">Interest Status</th>
+                <th className="px-5 py-3.5 font-bold whitespace-nowrap">Next Follow-up</th>
+                <th className="px-5 py-3.5 font-bold whitespace-nowrap">Doc Collection</th>
+                <th className="px-5 py-3.5 font-bold whitespace-nowrap">Stage / Handover</th>
+                <th className="px-5 py-3.5 font-bold text-right whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#DDE5F0]">
-              {rows.map((c) => (
-                <tr
-                  key={c.id}
-                  onClick={() => navigate({ to: "/cases/$caseId", params: { caseId: c.id } })}
-                  className="group cursor-pointer transition-colors bg-white hover:bg-[#DBEAFE]"
-                >
-                  <td className="px-5 py-4">
-                    <p className="font-bold text-[#0F2237] group-hover:text-[#F26500] transition-colors">
-                      {c.student}
-                    </p>
-                    <p className="text-xs text-[#64748B] group-hover:text-[#F26500] transition-colors">
-                      {c.id} · {c.source}
-                    </p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <p className="font-semibold text-[#0F2237] group-hover:text-[#F26500] transition-colors">{c.course}</p>
-                    <p className="text-xs text-[#64748B] group-hover:text-[#F26500] transition-colors">
-                      {c.country} · {c.university} · {c.intake}
-                    </p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <p className="stat-figure text-[#0F2237] font-bold group-hover:text-[#F26500] transition-colors">{formatLakh(c.amount)}</p>
-                    <p className="text-xs text-[#64748B] group-hover:text-[#F26500] transition-colors">{c.loanType}</p>
-                  </td>
-                  <td className="px-5 py-4 font-medium text-[#64748B] group-hover:text-[#F26500] transition-colors">{c.lender}</td>
-                  <td className="px-5 py-4 font-medium text-[#64748B] group-hover:text-[#F26500] transition-colors">{c.owner}</td>
-                  <td className="px-5 py-4">
-                    <StageBadge stage={c.stage} />
-                    <p className="mt-1 text-xs text-[#64748B] group-hover:text-[#F26500] transition-colors">{c.updated}</p>
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <span className="inline-flex items-center text-xs font-bold text-[#F26500] group-hover:translate-x-1 transition-transform">
-                      View details <ArrowRight className="ml-1 size-3.5" />
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 ? (
+              {rows.map((c) => {
+                const docP = calculateDocProgress(c.workflowDocuments);
+                const isHanded = c.handover?.isHandedOver ?? false;
+
+                // Find next upcoming/overdue follow-up
+                const activeFollowUps = (c.followUps || [])
+                  .filter((f) => f.status !== "Completed" && f.status !== "Cancelled")
+                  .map((f) => ({ ...f, effective: getEffectiveFollowUpStatus(f) }))
+                  .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+
+                const nextFollowUp = activeFollowUps[0];
+
+                return (
+                  <tr
+                    key={c.id}
+                    onClick={() => navigate({ to: "/cases/$caseId", params: { caseId: c.id } })}
+                    className="group cursor-pointer transition-colors bg-white hover:bg-[#DBEAFE]/80"
+                  >
+                    <td className="px-5 py-4 align-middle">
+                      <p className="font-bold text-[#0F2237] group-hover:text-[#F26500] transition-colors whitespace-nowrap">
+                        {c.student}
+                      </p>
+                      <p className="text-xs text-[#64748B] group-hover:text-[#F26500] transition-colors whitespace-nowrap mt-0.5">
+                        {c.id} · {c.phone}
+                      </p>
+                      <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-700 px-2 py-0.5 text-[11px] font-semibold mt-1 whitespace-nowrap">
+                        <Share2 className="size-3 text-blue-600" /> {c.source || "Website inquiry form"}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-4 align-middle">
+                      <p className="font-semibold text-[#0F2237] group-hover:text-[#F26500] transition-colors whitespace-nowrap">{c.course}</p>
+                      <p className="text-xs text-[#64748B] group-hover:text-[#F26500] transition-colors whitespace-nowrap mt-0.5">
+                        {c.country} · {c.university}
+                      </p>
+                    </td>
+
+                    <td className="px-5 py-4 align-middle whitespace-nowrap">
+                      <p className="stat-figure text-[#0F2237] font-bold group-hover:text-[#F26500] transition-colors">{formatLakh(c.amount)}</p>
+                      <p className="text-xs text-[#64748B] group-hover:text-[#F26500] transition-colors mt-0.5">{c.loanType}</p>
+                    </td>
+
+                    {/* Assigned Lender Partner */}
+                    <td className="px-5 py-4 align-middle">
+                      {c.lender && c.lender !== "Not assigned" ? (
+                        <div className="space-y-1">
+                          <span className="font-bold text-xs text-[#0F2237] block whitespace-nowrap group-hover:text-[#F26500] transition-colors">
+                            {c.lender}
+                          </span>
+                          {c.stage === "Rejected" ? (
+                            <span className="inline-flex items-center text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded whitespace-nowrap">
+                              Rejected by Lender
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-[10px] font-medium text-muted-foreground bg-muted/80 px-2 py-0.5 rounded whitespace-nowrap">
+                              {c.stage === "Sent to Lender" || c.stage === "Logged In" || c.stage === "Sanctioned" || c.stage === "Disbursed"
+                                ? "Active with Lender"
+                                : "Proposed Partner"}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic whitespace-nowrap">
+                          Not assigned
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="px-5 py-4 align-middle whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold border ${
+                          c.interestStatus === "Interested"
+                            ? "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
+                            : c.interestStatus === "Follow-up Required"
+                            ? "bg-amber-500/15 text-amber-700 border-amber-500/30"
+                            : c.interestStatus === "Not Interested"
+                            ? "bg-rose-500/15 text-rose-700 border-rose-500/30"
+                            : "bg-slate-500/15 text-slate-700 border-slate-500/30"
+                        }`}
+                      >
+                        {c.interestStatus || "Not Contacted"}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-4 align-middle whitespace-nowrap text-xs">
+                      {nextFollowUp ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 font-bold text-foreground">
+                            <Clock className="size-3.5 text-primary shrink-0" />
+                            <span>{formatDateTime(nextFollowUp.scheduledAt)}</span>
+                          </div>
+                          {nextFollowUp.effective === "Overdue" && (
+                            <span className="inline-flex items-center text-[10px] font-extrabold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                              OVERDUE
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+
+                    <td className="px-5 py-4 align-middle whitespace-nowrap text-xs">
+                      <div className="space-y-1.5 min-w-[110px]">
+                        <div className="flex items-center justify-between text-[11px] font-bold">
+                          <span>{docP.received}/{docP.total} Docs</span>
+                          <span className={docP.isComplete ? "text-emerald-600 font-extrabold" : "text-primary"}>
+                            {docP.percentage}%
+                          </span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-muted overflow-hidden border border-border/40">
+                          <div
+                            className={`h-full transition-all ${docP.isComplete ? "bg-emerald-600" : "bg-primary"}`}
+                            style={{ width: `${docP.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-4 align-middle whitespace-nowrap">
+                      <div className="space-y-1">
+                        <StageBadge stage={c.stage} />
+                        {isHanded && (
+                          <span className="inline-block text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            ✓ Handed Over
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-4 align-middle text-right whitespace-nowrap">
+                      <span className="inline-flex items-center text-xs font-bold text-primary group-hover:translate-x-1 transition-transform">
+                        Manage <ArrowRight className="ml-1 size-3.5" />
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
-                    No cases match this filter.
+                  <td colSpan={8} className="px-5 py-12 text-center text-muted-foreground">
+                    No cases match these filters.
                   </td>
                 </tr>
-              ) : null}
+              )}
             </tbody>
           </table>
         </div>

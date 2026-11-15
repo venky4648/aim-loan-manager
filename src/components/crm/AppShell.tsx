@@ -15,12 +15,14 @@ import {
   Eye,
   ChevronDown,
   UserPlus,
+  RotateCcw,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { NormiloansLogo } from "@/components/crm/NormiloansLogo";
 import { useAuth } from "@/lib/auth-context";
+import { useCases } from "@/lib/cases-context";
 import { UserRole, MOCK_USERS } from "@/lib/permissions";
 import {
   DropdownMenu,
@@ -107,6 +109,7 @@ export function AppShell({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { role, user, setRole } = useAuth();
+  const { resetCases } = useCases();
 
   const signOut = async () => {
     localStorage.removeItem("crm_user");
@@ -120,9 +123,17 @@ export function AppShell({
     navigate({ to: "/auth", replace: true });
   };
 
-  const navItems = ALL_NAV_ITEMS.filter((item) => item.roles.includes(role));
-  const currentBadge = ROLE_BADGE_STYLE[role];
+  const safeRole = role || "admin";
+  const navItems = ALL_NAV_ITEMS.filter((item) => item.roles.includes(safeRole));
+  const currentBadge = ROLE_BADGE_STYLE[safeRole] || ROLE_BADGE_STYLE.admin;
   const BadgeIcon = currentBadge.icon;
+  const safeName = user?.name || "Staff User";
+  const safeRoleTitle = user?.roleTitle || "Loan Officer";
+  const userInitials = safeName
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("") || "U";
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -137,18 +148,18 @@ export function AppShell({
         <div className="mb-5 rounded-2xl border-2 border-[#1E3A5F] bg-sidebar-accent/40 p-3.5">
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-white font-bold text-sm shadow-sm">
-              {user.name.split(" ").map((n) => n[0]).join("")}
+              {userInitials}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-              <p className="truncate text-xs text-sidebar-foreground/75">{user.roleTitle}</p>
+              <p className="truncate text-sm font-semibold text-white">{safeName}</p>
+              <p className="truncate text-xs text-sidebar-foreground/75">{safeRoleTitle}</p>
             </div>
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-sidebar-border/60 pt-2.5">
             <span className="text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/60">Active Role</span>
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border ${currentBadge.style}`}>
               <BadgeIcon className="size-3" />
-              {role.toUpperCase()}
+              {safeRole.toUpperCase()}
             </span>
           </div>
         </div>
@@ -156,7 +167,7 @@ export function AppShell({
         {/* Navigation Items */}
         <nav className="flex flex-1 flex-col gap-1.5 overflow-y-auto no-scrollbar">
           {navItems.map((item) => {
-            const displayLabel = item.labelMap ? item.labelMap[role] || item.label : item.label;
+            const displayLabel = item.labelMap ? item.labelMap[safeRole] || item.label : item.label;
             return (
               <Link
                 key={item.to}
@@ -173,7 +184,7 @@ export function AppShell({
           })}
 
           {/* Quick Create Lead for Sales & Admin */}
-          {role !== "viewer" && (
+          {safeRole !== "viewer" && (
             <Link
               to="/student-registration"
               className="mt-2 flex items-center gap-3 rounded-xl border-2 border-primary/40 bg-primary/10 px-3.5 py-2.5 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-white"
@@ -216,6 +227,11 @@ export function AppShell({
                   </DropdownMenuItem>
                 );
               })}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={resetCases} className="cursor-pointer text-amber-600 font-semibold text-xs">
+                <RotateCcw className="mr-2 size-3.5" />
+                Reset Demo Data
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -242,7 +258,7 @@ export function AppShell({
                 <h1 className="truncate text-xl font-bold tracking-tight text-foreground md:text-2xl">{title}</h1>
                 <span className={`hidden sm:inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold border ${currentBadge.style}`}>
                   <BadgeIcon className="size-3" />
-                  {role.toUpperCase()} MODE
+                  {safeRole.toUpperCase()} MODE
                 </span>
               </div>
               {subtitle ? <p className="mt-0.5 text-xs font-medium text-muted-foreground md:text-sm">{subtitle}</p> : null}
@@ -259,7 +275,7 @@ export function AppShell({
                   className="hidden sm:flex font-semibold text-xs gap-1.5 border-2 border-[#CBD5E1] bg-white text-[#0F2237] hover:bg-[#F1F5F9] hover:border-slate-400 transition-colors shadow-xs"
                 >
                   <UserCheck className="size-3.5 text-[#F26500]" />
-                  <span>Role: <strong className="text-[#0F2237]">{user.name}</strong> ({role})</span>
+                  <span>Role: <strong className="text-[#0F2237]">{safeName}</strong> ({safeRole})</span>
                   <ChevronDown className="size-3 opacity-60 text-[#0F2237]" />
                 </Button>
               </DropdownMenuTrigger>
@@ -280,6 +296,11 @@ export function AppShell({
                     </DropdownMenuItem>
                   );
                 })}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={resetCases} className="cursor-pointer text-amber-600 font-semibold text-xs">
+                  <RotateCcw className="mr-2 size-3.5" />
+                  Reset Demo Data
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -293,7 +314,7 @@ export function AppShell({
         {/* Mobile Navigation bar */}
         <nav className="flex gap-1 overflow-x-auto no-scrollbar border-b-2 border-[#CBD5E1] bg-card px-3 py-2 md:hidden">
           {navItems.map((item) => {
-            const displayLabel = item.labelMap ? item.labelMap[role] || item.label : item.label;
+            const displayLabel = item.labelMap ? item.labelMap[safeRole] || item.label : item.label;
             return (
               <Link
                 key={item.to}
@@ -324,7 +345,7 @@ export function StageBadge({ stage }: { stage: string }) {
           ? "bg-primary/15 text-primary font-semibold"
           : "bg-secondary text-secondary-foreground font-medium";
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs ${tone}`}>{stage}</span>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs whitespace-nowrap font-bold border border-border/40 ${tone}`}>{stage}</span>
   );
 }
 

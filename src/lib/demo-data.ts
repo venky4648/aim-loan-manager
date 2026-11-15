@@ -23,6 +23,30 @@ export const STAGES: CaseStage[] = [
   "Rejected",
 ];
 
+export const REFERRAL_SOURCES = [
+  "Referral — Student / Alumni",
+  "Referral — Friends & Family",
+  "Channel partner / Consultant",
+  "College / University Partner",
+  "Website inquiry form",
+  "Instagram / Social Media",
+  "Walk-in / Office visit",
+  "Direct Tele-calling / Inbound call",
+  "Education Fair / Seminar",
+  "Other",
+] as const;
+
+export type ReferralSource = (typeof REFERRAL_SOURCES)[number];
+
+import {
+  InterestStatus,
+  ContactStatus,
+  FollowUpRecord,
+  CaseDocumentItem,
+  HandoverInfo,
+  ActivityItem,
+} from "./sales-workflow-types";
+
 export type DemoCase = {
   id: string;
   student: string;
@@ -59,10 +83,19 @@ export type DemoCase = {
     location: string;
     marketValue: number;
     owner: string;
-  };
+  } | undefined;
   academics: { tenth: string; twelfth: string; graduation: string; tests: string; experience: string };
   documents: { name: string; status: "Received" | "Pending" | "Verified" }[];
   timeline: { date: string; label: string; by: string }[];
+  // Extended Sales Workflow Fields
+  contactStatus?: ContactStatus | undefined;
+  interestStatus?: InterestStatus | undefined;
+  notInterestedReason?: string | undefined;
+  lenderRejectionReason?: string | undefined;
+  followUps?: FollowUpRecord[] | undefined;
+  workflowDocuments?: CaseDocumentItem[] | undefined;
+  handover?: HandoverInfo | undefined;
+  activities?: ActivityItem[] | undefined;
 };
 
 export const CASES: DemoCase[] = [

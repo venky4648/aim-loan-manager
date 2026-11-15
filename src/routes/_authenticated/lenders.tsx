@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { LENDERS } from "@/lib/demo-data";
 
 export const Route = createFileRoute("/_authenticated/lenders")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Lender Partners | Normiloans CRM" },

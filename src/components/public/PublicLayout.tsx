@@ -33,7 +33,7 @@ export function PublicHeader() {
             <Link
               key={link.label}
               to={link.to}
-              hash={link.hash}
+              {...(link.hash ? { hash: link.hash } : {})}
               className={`transition-colors hover:text-[#F26500] ${
                 isActive ? "text-[#F26500] font-semibold underline underline-offset-8" : ""
               }`}

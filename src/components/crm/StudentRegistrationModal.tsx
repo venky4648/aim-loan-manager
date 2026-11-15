@@ -20,8 +20,11 @@ import {
   X,
   FileCheck,
   RotateCcw,
+  Share2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useCases } from "@/lib/cases-context";
+import { REFERRAL_SOURCES } from "@/lib/demo-data";
 
 export interface StudentRegistrationModalProps {
   open: boolean;
@@ -34,6 +37,7 @@ export interface RegistrationFormData {
   fullName: string;
   mobile: string;
   email: string;
+  source: string;
 
   // Step 2: Study Details
   country: string;
@@ -120,6 +124,7 @@ const INITIAL_FORM_DATA: RegistrationFormData = {
   fullName: "",
   mobile: "",
   email: "",
+  source: "Website inquiry form",
   country: "",
   university: "",
   course: "",
@@ -195,6 +200,7 @@ export function StudentRegistrationModal({
   open,
   onOpenChange,
 }: StudentRegistrationModalProps) {
+  const { addCase } = useCases();
   const [step, setStep] = useState<number>(1);
   const [data, setData] = useState<RegistrationFormData>(INITIAL_FORM_DATA);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -287,7 +293,65 @@ export function StudentRegistrationModal({
       if (step === 11) {
         setIsCompleted(true);
         setStep(12);
-        toast.success("Application details review completed!");
+        addCase({
+          student: data.fullName,
+          phone: data.mobile,
+          email: data.email,
+          source: data.source || "Website inquiry form",
+          country: data.country,
+          university: data.university,
+          course: data.course,
+          amount: data.loanAmount
+            ? parseInt(data.loanAmount.replace(/[^0-9]/g, "")) || 3500000
+            : 3500000,
+          loanType: data.loanType === "Secured" ? "Secured" : "Unsecured",
+          coApplicant: {
+            name: data.coApplicantName || "Co-Applicant",
+            relation: "Parent",
+            employment:
+              data.coApplicantEmployment === "Self-employed"
+                ? "Self-employed"
+                : "Salaried",
+            organisation: data.coApplicantOrg || "Private Company",
+            monthlyIncome: data.coApplicantMonthlyIncome
+              ? parseInt(data.coApplicantMonthlyIncome.replace(/[^0-9]/g, "")) ||
+                80000
+              : 80000,
+            obligations: data.coApplicantObligations
+              ? parseInt(data.coApplicantObligations.replace(/[^0-9]/g, "")) ||
+                10000
+              : 10000,
+            city: data.coApplicantWorkplace || "Hyderabad",
+          },
+          academics: {
+            tenth: data.tenthScore ? `${data.tenthScore}%` : "88%",
+            twelfth: data.twelfthScore ? `${data.twelfthScore}%` : "85%",
+            graduation: data.gradDegree
+              ? `${data.gradDegree} - ${data.gradScore || "7.5 CGPA"}`
+              : "B.Tech - 8.0 CGPA",
+            tests: data.ieltsScore
+              ? `IELTS ${data.ieltsScore}`
+              : data.greScore
+              ? `GRE ${data.greScore}`
+              : "IELTS 7.0",
+            experience:
+              data.isExperienced === "Experienced"
+                ? `${data.workExperienceYears || "1"} years`
+                : "Fresher",
+          },
+          collateral:
+            data.hasCollateral === "Yes"
+              ? {
+                  type: data.propertyType || "House",
+                  location: data.propertyLocation || "Hyderabad",
+                  marketValue: data.propertyMarketValue
+                    ? parseInt(data.propertyMarketValue.replace(/[^0-9]/g, "")) || 5000000
+                    : 5000000,
+                  owner: data.propertyOwner || "Co-Applicant",
+                }
+              : undefined,
+        });
+        toast.success("Application details registered into CRM pipeline!");
       } else {
         setStep((prev) => Math.min(prev + 1, 12));
       }
@@ -383,6 +447,25 @@ export function StudentRegistrationModal({
                     className={errors.email ? "border-destructive" : ""}
                   />
                   {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="source" className="font-medium flex items-center gap-1.5">
+                    <Share2 className="size-3.5 text-primary" />
+                    <span>Referral / Lead Source <span className="text-destructive">*</span></span>
+                  </Label>
+                  <select
+                    id="source"
+                    value={data.source}
+                    onChange={(e) => updateField("source", e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    {REFERRAL_SOURCES.map((src) => (
+                      <option key={src} value={src}>
+                        {src}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -1237,6 +1320,9 @@ export function StudentRegistrationModal({
                   <p className="text-xs font-semibold text-foreground">{data.fullName || "—"}</p>
                   <p className="text-xs text-muted-foreground">Mobile: {data.mobile || "—"}</p>
                   <p className="text-xs text-muted-foreground">Email: {data.email || "—"}</p>
+                  <p className="text-xs font-medium text-primary flex items-center gap-1 pt-1">
+                    <Share2 className="size-3" /> Source: {data.source || "Website inquiry form"}
+                  </p>
                 </div>
 
                 {/* 2. Study Details */}

@@ -5,6 +5,7 @@ import { AppShell, StatCard } from "@/components/crm/AppShell";
 import { CASES, formatINR, formatLakh } from "@/lib/demo-data";
 
 export const Route = createFileRoute("/_authenticated/disbursements")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Disbursements & Payouts | Normiloans CRM" },

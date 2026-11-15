@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, UserCheck } from "lucide-react";
+import { CheckCircle2, UserCheck, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { useCases } from "@/lib/cases-context";
+import { REFERRAL_SOURCES } from "@/lib/demo-data";
 
 export interface StudentRegistrationFormData {
   fullName: string;
@@ -12,6 +14,7 @@ export interface StudentRegistrationFormData {
   country: string;
   university: string;
   course: string;
+  source: string;
 }
 
 export type FormErrors = Partial<Record<keyof StudentRegistrationFormData, string>>;
@@ -23,9 +26,11 @@ const INITIAL_DATA: StudentRegistrationFormData = {
   country: "",
   university: "",
   course: "",
+  source: "Website inquiry form",
 };
 
 export function StudentRegistrationForm() {
+  const { addCase } = useCases();
   const [formData, setFormData] = useState<StudentRegistrationFormData>(INITIAL_DATA);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
@@ -83,6 +88,15 @@ export function StudentRegistrationForm() {
 
     if (validate()) {
       setIsSubmitted(true);
+      addCase({
+        student: formData.fullName,
+        phone: formData.mobile,
+        email: formData.email,
+        country: formData.country,
+        university: formData.university,
+        course: formData.course,
+        source: formData.source || "Website inquiry form",
+      });
       toast.success("Registration details submitted successfully.");
     } else {
       toast.error("Please fill in all required fields correctly.");
@@ -253,6 +267,35 @@ export function StudentRegistrationForm() {
             />
             {errors.university && <p className="text-xs text-destructive">{errors.university}</p>}
           </div>
+        </div>
+      </div>
+
+      {/* SECTION 3 — REFERRAL / LEAD SOURCE */}
+      <div className="space-y-4">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-border/60 pb-2 flex items-center gap-1.5">
+          <Share2 className="size-3.5" />
+          <span>Section 3 — Referral & Lead Source</span>
+        </h3>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="source" className="font-medium">
+            How did you hear about us? (Referral Source) <span className="text-destructive">*</span>
+          </Label>
+          <select
+            id="source"
+            value={formData.source}
+            onChange={(e) => updateField("source", e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            {REFERRAL_SOURCES.map((src) => (
+              <option key={src} value={src}>
+                {src}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            Helps our sales and processing teams attribute and fast-track your student loan file.
+          </p>
         </div>
       </div>
 
