@@ -10,6 +10,8 @@ import {
   DocCollectionStatus,
   calculateDocProgress,
   getEffectiveFollowUpStatus,
+  LenderStatus,
+  LenderSubmissionRecord,
 } from "./sales-workflow-types";
 import { toast } from "sonner";
 import {
@@ -25,6 +27,10 @@ import {
   handoverLeadApi,
   updateLeadLenderApi,
   addCommentApi,
+  submitToLenderApi,
+  updateLenderDecisionApi,
+  rerouteToNewLenderApi,
+  uploadLeadDocumentsApi,
 } from "./api-client";
 
 const STORAGE_KEY = "normiloans_crm_cases_v3";
@@ -53,7 +59,8 @@ function normalizeCase(c: any): DemoCase {
       stage: "New Lead",
       lender: "Not assigned",
       owner: "Praveen K",
-      source: "Website form",
+      source: "Customer reference",
+      sourceName: "",
       updated: "Today",
       contactStatus: "Not Contacted",
       interestStatus: "Not Contacted",
@@ -153,9 +160,20 @@ function normalizeCase(c: any): DemoCase {
     amount: typeof c.amount === "number" && !isNaN(c.amount) ? c.amount : 3500000,
     stage: c.stage || "New Lead",
     lender: String(c.lender || "Not assigned"),
+    lenderStatus: c.lenderStatus || (c.stage === "Sanctioned" ? "Sanctioned" : c.stage === "Rejected" ? "Rejected" : c.lender && c.lender !== "Not assigned" ? "Submitted" : "Not Assigned"),
+    lenderApplicationNo: c.lenderApplicationNo || undefined,
+    lenderSubmittedAt: c.lenderSubmittedAt || undefined,
+    lenderSubmittedBy: c.lenderSubmittedBy || undefined,
+    lenderLocked: c.lenderLocked !== undefined ? c.lenderLocked : (c.lender && c.lender !== "Not assigned" && c.stage !== "Rejected"),
     lenderRejectionReason: c.lenderRejectionReason,
+    lenderSubmissions: Array.isArray(c.lenderSubmissions) ? c.lenderSubmissions : [],
     owner: String(c.owner || "Praveen K"),
-    source: String(c.source || "Website form"),
+    source: String(c.source || "Customer reference"),
+    sourceName: c.sourceName ? String(c.sourceName) : undefined,
+    alternativePhone: c.alternativePhone ? String(c.alternativePhone) : undefined,
+    planningCountry: c.planningCountry ? String(c.planningCountry) : undefined,
+    studyCountry: c.studyCountry ? String(c.studyCountry) : undefined,
+    loanRequirement: c.loanRequirement ? String(c.loanRequirement) : undefined,
     updated: String(c.updated || "Today"),
     contactStatus: c.contactStatus || "Not Contacted",
     interestStatus: c.interestStatus || "Not Contacted",
@@ -181,6 +199,15 @@ function normalizeCase(c: any): DemoCase {
       tests: "IELTS 7.0",
       experience: "Fresher",
     },
+    guarantor: c.guarantor && typeof c.guarantor === "object" ? c.guarantor : undefined,
+    studentDocuments: Array.isArray(c.studentDocuments) ? c.studentDocuments : [],
+    parentDocuments: Array.isArray(c.parentDocuments) ? c.parentDocuments : [],
+    propertyDocuments: Array.isArray(c.propertyDocuments) ? c.propertyDocuments : [],
+    studentDocumentsStatus: c.studentDocumentsStatus || "Not Received",
+    parentDocumentsStatus: c.parentDocumentsStatus || "Not Received",
+    propertyDocumentsStatus: c.propertyDocumentsStatus || "Not Received",
+    documentStatusesUpdatedAt: c.documentStatusesUpdatedAt || undefined,
+    documentStatusesUpdatedBy: c.documentStatusesUpdatedBy || undefined,
   };
 }
 
@@ -293,7 +320,69 @@ interface CasesContextType {
       authorName: string;
     }
   ) => void;
-  updateReferralSource: (caseId: string, newSource: string, authorName: string) => void;
+  submitToLender: (
+    caseId: string,
+    payload: {
+      lender: string;
+      applicationNo?: string | undefined;
+      notes?: string | undefined;
+      authorName: string;
+    }
+  ) => void;
+  updateLenderDecision: (
+    caseId: string,
+    payload: {
+      status: LenderStatus;
+      rejectionReason?: string | undefined;
+      sanctionAmount?: number | undefined;
+      roi?: number | undefined;
+      tenure?: number | undefined;
+      notes?: string | undefined;
+      authorName: string;
+    }
+  ) => void;
+  rerouteToNewLender: (
+    caseId: string,
+    payload: {
+      newLender: string;
+      applicationNo?: string | undefined;
+      reason?: string | undefined;
+      authorName: string;
+    }
+  ) => void;
+  updateReferralSource: (
+    caseId: string,
+    newSource: string,
+    sourceName?: string | undefined,
+    authorName?: string | undefined
+  ) => void;
+  updateApplicationDocuments: (
+    caseId: string,
+    section: "student" | "parent" | "property",
+    documents: Array<{
+      id: string;
+      name: string;
+      type: string;
+      category?: string | undefined;
+      collectionStatus?: "Not Received" | "Partially Received" | "Received" | undefined;
+      fileName?: string | undefined;
+      fileUrl?: string | undefined;
+      mimeType?: string | undefined;
+      size?: number | undefined;
+      status: "Pending" | "Uploaded";
+      file?: File | undefined;
+    }>
+  ) => Promise<boolean>;
+  updateApplicationDetails: (
+    caseId: string,
+    payload: Record<string, unknown>,
+  ) => Promise<boolean>;
+  updateDocumentSectionStatus: (
+    caseId: string,
+    section: "student" | "parent" | "property",
+    status: "Not Received" | "Partially Received" | "Received",
+    authorName: string,
+  ) => Promise<boolean>;
   addCase: (newCase: Partial<DemoCase>) => DemoCase;
   resetCases: () => void;
 }
@@ -1113,6 +1202,33 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
         return {
           ...c,
           workflowDocuments: updatedDocs,
+          studentDocuments: (c.studentDocuments || []).map((document) =>
+            document.name === docName
+              ? {
+                  ...document,
+                  collectionStatus: payload.collectionStatus,
+                  status: payload.collectionStatus === "Received" ? "Uploaded" : "Pending",
+                }
+              : document,
+          ),
+          parentDocuments: (c.parentDocuments || []).map((document) =>
+            document.name === docName
+              ? {
+                  ...document,
+                  collectionStatus: payload.collectionStatus,
+                  status: payload.collectionStatus === "Received" ? "Uploaded" : "Pending",
+                }
+              : document,
+          ),
+          propertyDocuments: (c.propertyDocuments || []).map((document) =>
+            document.name === docName
+              ? {
+                  ...document,
+                  collectionStatus: payload.collectionStatus,
+                  status: payload.collectionStatus === "Received" ? "Uploaded" : "Pending",
+                }
+              : document,
+          ),
           stage: autoStage,
           updated: "Just now",
           activities: newActivities,
@@ -1370,21 +1486,269 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
     toast.error(`Case marked as Rejected by lender. You can now re-assign to another lender.`);
   };
 
-  // 13b. Update Referral Source
-  const updateReferralSource = (caseId: string, newSource: string, authorName: string) => {
+  // 13c. Submit File to Lender & Lock
+  const submitToLender = (
+    caseId: string,
+    payload: {
+      lender: string;
+      applicationNo?: string | undefined;
+      notes?: string | undefined;
+      authorName: string;
+    }
+  ) => {
+    const appNo = payload.applicationNo || `${payload.lender.slice(0, 3).toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const nowIso = new Date().toISOString();
+
+    const newSub: LenderSubmissionRecord = {
+      id: `sub_${Date.now()}`,
+      lender: payload.lender,
+      applicationNo: appNo,
+      status: "Submitted",
+      submittedAt: nowIso,
+      submittedBy: payload.authorName,
+      notes: payload.notes || "File submitted to lender.",
+    };
+
     setCases((prev) =>
       prev.map((c) => {
         if (c.id !== caseId) return c;
-        const oldSource = c.source || "Website inquiry form";
+
+        const newActivities: ActivityItem[] = [
+          {
+            id: `act_${Date.now()}`,
+            caseId,
+            type: "lender_submit",
+            description: `File officially submitted to ${payload.lender} (App No: ${appNo}). File is locked with lender.`,
+            comment: payload.notes || undefined,
+            updatedBy: payload.authorName,
+            timestamp: nowIso,
+          },
+          ...(c.activities || []),
+        ];
+
+        return {
+          ...c,
+          lender: payload.lender,
+          lenderStatus: "Submitted" as LenderStatus,
+          lenderApplicationNo: appNo,
+          lenderSubmittedAt: nowIso,
+          lenderSubmittedBy: payload.authorName,
+          lenderLocked: true,
+          lenderRejectionReason: undefined,
+          stage: "Logged In" as CaseStage,
+          lenderSubmissions: [newSub, ...(c.lenderSubmissions || [])],
+          updated: "Just now",
+          activities: newActivities,
+        };
+      })
+    );
+
+    submitToLenderApi(caseId, payload).catch((err) =>
+      console.warn("[CasesProvider] Failed to sync lender submission to backend:", err)
+    );
+
+    toast.success(`File successfully locked & submitted to ${payload.lender} (App No: ${appNo})`);
+  };
+
+  // 13d. Update Lender Decision / Status
+  const updateLenderDecision = (
+    caseId: string,
+    payload: {
+      status: LenderStatus;
+      rejectionReason?: string | undefined;
+      sanctionAmount?: number | undefined;
+      roi?: number | undefined;
+      tenure?: number | undefined;
+      notes?: string | undefined;
+      authorName: string;
+    }
+  ) => {
+    const nowIso = new Date().toISOString();
+
+    setCases((prev) =>
+      prev.map((c) => {
+        if (c.id !== caseId) return c;
+        const currentLender = c.lender || "Lender";
+
+        let targetStage: CaseStage = c.stage;
+        let actType: ActivityItem["type"] = "system";
+        let actDesc = `Lender status updated to "${payload.status}".`;
+        let isLocked = c.lenderLocked ?? true;
+        let rejectionReason = c.lenderRejectionReason;
+        let sanctionedAmt = c.sanctioned;
+        let roiVal = c.roi;
+        let tenureVal = c.tenure;
+        let disbursedAmt = c.disbursed;
+
+        if (payload.status === "In Underwriting") {
+          targetStage = "Logged In";
+          actType = "underwriting";
+          actDesc = `Application is under active Credit Underwriting review with ${currentLender}.`;
+        } else if (payload.status === "Sanctioned" || payload.status === "Approved") {
+          targetStage = "Sanctioned";
+          actType = "sanction";
+          sanctionedAmt = payload.sanctionAmount || c.amount;
+          roiVal = payload.roi || c.roi;
+          tenureVal = payload.tenure || c.tenure;
+          rejectionReason = undefined;
+          actDesc = `Loan Sanction Letter issued by ${currentLender} for INR ${sanctionedAmt.toLocaleString("en-IN")}${roiVal ? ` @ ${roiVal}%` : ""}.`;
+        } else if (payload.status === "Disbursed") {
+          targetStage = "Disbursed";
+          actType = "disbursement";
+          disbursedAmt = sanctionedAmt || c.amount;
+          actDesc = `Loan disbursed by ${currentLender} (INR ${disbursedAmt.toLocaleString("en-IN")}).`;
+        } else if (payload.status === "Rejected") {
+          targetStage = "Rejected";
+          actType = "not_interested";
+          isLocked = false; // UNLOCKED FOR RE-ROUTING
+          rejectionReason = payload.rejectionReason || "Lender credit policy criteria not met.";
+          actDesc = `Loan application declined / rejected by ${currentLender}. Reason: ${rejectionReason}`;
+        }
+
+        const updatedSubmissions = (c.lenderSubmissions || []).map((s, idx) => {
+          if (idx !== 0) return s;
+          return {
+            ...s,
+            status: payload.status,
+            decisionAt: nowIso,
+            rejectionReason: payload.status === "Rejected" ? rejectionReason : s.rejectionReason,
+            sanctionAmount: payload.status === "Sanctioned" ? sanctionedAmt : s.sanctionAmount,
+            roi: payload.status === "Sanctioned" ? roiVal : s.roi,
+            tenure: payload.status === "Sanctioned" ? tenureVal : s.tenure,
+          };
+        });
+
+        const newActivities: ActivityItem[] = [
+          {
+            id: `act_${Date.now()}`,
+            caseId,
+            type: actType,
+            description: actDesc,
+            comment: payload.notes || (payload.status === "Rejected" ? `Rejection Reason: ${rejectionReason}` : undefined),
+            updatedBy: payload.authorName,
+            timestamp: nowIso,
+          },
+          ...(c.activities || []),
+        ];
+
+        return {
+          ...c,
+          lenderStatus: payload.status,
+          stage: targetStage,
+          lenderLocked: isLocked,
+          lenderRejectionReason: rejectionReason,
+          sanctioned: sanctionedAmt,
+          roi: roiVal,
+          tenure: tenureVal,
+          disbursed: disbursedAmt,
+          lenderSubmissions: updatedSubmissions,
+          updated: "Just now",
+          activities: newActivities,
+        };
+      })
+    );
+
+    updateLenderDecisionApi(caseId, payload).catch((err) =>
+      console.warn("[CasesProvider] Failed to sync lender decision to backend:", err)
+    );
+
+    if (payload.status === "Rejected") {
+      toast.error("Application marked as Declined. The file is unlocked and ready for re-routing.");
+    } else {
+      toast.success(`Lender status updated to "${payload.status}"`);
+    }
+  };
+
+  // 13e. Re-route to New Lender
+  const rerouteToNewLender = (
+    caseId: string,
+    payload: {
+      newLender: string;
+      applicationNo?: string | undefined;
+      reason?: string | undefined;
+      authorName: string;
+    }
+  ) => {
+    const appNo = payload.applicationNo || `${payload.newLender.slice(0, 3).toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const nowIso = new Date().toISOString();
+
+    const newSub: LenderSubmissionRecord = {
+      id: `sub_${Date.now()}`,
+      lender: payload.newLender,
+      applicationNo: appNo,
+      status: "Submitted",
+      submittedAt: nowIso,
+      submittedBy: payload.authorName,
+      notes: payload.reason || "Re-routed to new lender.",
+    };
+
+    setCases((prev) =>
+      prev.map((c) => {
+        if (c.id !== caseId) return c;
+        const prevLender = c.lender || "Previous Lender";
+
+        const newActivities: ActivityItem[] = [
+          {
+            id: `act_${Date.now()}`,
+            caseId,
+            type: "reroute",
+            description: `File re-routed from ${prevLender} to new partner ${payload.newLender} (App No: ${appNo}). File re-locked for review.`,
+            comment: payload.reason || "Re-routed following previous decline.",
+            updatedBy: payload.authorName,
+            timestamp: nowIso,
+          },
+          ...(c.activities || []),
+        ];
+
+        return {
+          ...c,
+          lender: payload.newLender,
+          lenderStatus: "Submitted" as LenderStatus,
+          lenderApplicationNo: appNo,
+          lenderSubmittedAt: nowIso,
+          lenderSubmittedBy: payload.authorName,
+          lenderLocked: true,
+          lenderRejectionReason: undefined,
+          stage: "Logged In" as CaseStage,
+          lenderSubmissions: [newSub, ...(c.lenderSubmissions || [])],
+          updated: "Just now",
+          activities: newActivities,
+        };
+      })
+    );
+
+    rerouteToNewLenderApi(caseId, payload).catch((err) =>
+      console.warn("[CasesProvider] Failed to sync lender re-routing to backend:", err)
+    );
+
+    toast.success(`File successfully re-routed and locked with ${payload.newLender}!`);
+  };
+
+  // 13b. Update Referral Source & Detail
+  const updateReferralSource = (
+    caseId: string,
+    newSource: string,
+    sourceName?: string | undefined,
+    authorName?: string | undefined
+  ) => {
+    const author = authorName || "Staff";
+    setCases((prev) =>
+      prev.map((c) => {
+        if (c.id !== caseId) return c;
+        const oldSource = c.source || "Customer reference";
+        const oldSourceName = c.sourceName || "";
+        const desc = sourceName
+          ? `Sourcing channel updated to "${newSource}" (${sourceName}).`
+          : `Sourcing channel updated from "${oldSource}" to "${newSource}".`;
         const newActivities: ActivityItem[] = [
           {
             id: `act_${Date.now()}`,
             caseId: c.id,
             type: "system",
-            description: `Referral source updated from "${oldSource}" to "${newSource}".`,
-            previousValue: oldSource,
-            newValue: newSource,
-            updatedBy: authorName,
+            description: desc,
+            previousValue: oldSourceName ? `${oldSource} (${oldSourceName})` : oldSource,
+            newValue: sourceName ? `${newSource} (${sourceName})` : newSource,
+            updatedBy: author,
             timestamp: new Date().toISOString(),
           },
           ...(c.activities || []),
@@ -1393,6 +1757,7 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
         return {
           ...c,
           source: newSource,
+          sourceName: sourceName !== undefined ? sourceName : c.sourceName,
           updated: "Just now",
           activities: newActivities,
         };
@@ -1402,9 +1767,10 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
     // Sync to backend MongoDB API
     updateLeadApi(caseId, {
       source: newSource,
+      sourceName: sourceName !== undefined ? sourceName : undefined,
     }).catch((err) => console.warn("[CasesProvider] Failed to sync referral source to backend:", err));
 
-    toast.success(`Referral source updated to "${newSource}"`);
+    toast.success(`Sourcing updated to "${newSource}"`);
   };
 
   // 14. Add New Lead (from modal/registration)
@@ -1424,7 +1790,11 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
       stage: "New Lead",
       lender: newCaseData.lender || "Not assigned",
       owner: newCaseData.owner || "Praveen K",
-      source: newCaseData.source || "Website form",
+      source: newCaseData.source || "Customer reference",
+      sourceName: newCaseData.sourceName || "",
+      studentDocumentsStatus: newCaseData.studentDocumentsStatus || "Not Received",
+      parentDocumentsStatus: newCaseData.parentDocumentsStatus || "Not Received",
+      propertyDocumentsStatus: newCaseData.propertyDocumentsStatus || "Not Received",
       updated: "Just now",
       coApplicant: newCaseData.coApplicant || {
         name: "Co-applicant Name",
@@ -1486,6 +1856,13 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
       .then((res) => {
         if (res.success && res.lead) {
           console.log("[CasesProvider] New lead successfully synced to MongoDB backend:", res.lead.id);
+          Promise.all([
+            uploadLeadDocumentsApi(res.lead.id, "student", (newCaseData as any).studentDocuments || []),
+            uploadLeadDocumentsApi(res.lead.id, "parent", (newCaseData as any).parentDocuments || []),
+            uploadLeadDocumentsApi(res.lead.id, "property", (newCaseData as any).propertyDocuments || []),
+          ]).catch((err) => {
+            console.warn("[CasesProvider] Document upload sync failed:", err);
+          });
         }
       })
       .catch((err) => {
@@ -1501,6 +1878,155 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
     } catch {}
     setCases(getInitialCases());
     toast.success("Cases reset to default demonstration data.");
+  };
+
+  const updateDocumentSectionStatus = async (
+    caseId: string,
+    section: "student" | "parent" | "property",
+    status: "Not Received" | "Partially Received" | "Received",
+    authorName: string,
+  ) => {
+    const fieldName =
+      section === "student"
+        ? "studentDocumentsStatus"
+        : section === "parent"
+          ? "parentDocumentsStatus"
+          : "propertyDocumentsStatus";
+    const updatedAt = new Date().toISOString();
+    const response = await updateLeadApi(caseId, {
+      [fieldName]: status,
+      documentStatusesUpdatedAt: updatedAt,
+      documentStatusesUpdatedBy: authorName,
+    });
+    if (!response.success) {
+      toast.error(response.error || "Failed to update document status.");
+      return false;
+    }
+
+    setCases((previous) =>
+      previous.map((item) =>
+        item.id === caseId
+          ? {
+              ...item,
+              [fieldName]: status,
+              documentStatusesUpdatedAt: updatedAt,
+              documentStatusesUpdatedBy: authorName,
+            }
+          : item,
+      ),
+    );
+    const sectionLabel = section === "student" ? "Student" : section === "parent" ? "Parent" : "Property";
+    toast.success(`${sectionLabel} documents marked as ${status}.`);
+    return true;
+  };
+
+  const updateApplicationDocuments = async (
+    caseId: string,
+    section: "student" | "parent" | "property",
+    documents: Array<{
+      id: string;
+      name: string;
+      type: string;
+      category?: string | undefined;
+      fileName?: string | undefined;
+      fileUrl?: string | undefined;
+      mimeType?: string | undefined;
+      size?: number | undefined;
+      status: "Pending" | "Uploaded";
+      file?: File | undefined;
+    }>,
+  ) => {
+    const response = await uploadLeadDocumentsApi(caseId, section, documents);
+    if (!response.success) {
+      toast.error(response.error || "Failed to save application documents.");
+      return false;
+    }
+
+    const fieldName =
+      section === "student"
+        ? "studentDocuments"
+        : section === "parent"
+          ? "parentDocuments"
+          : "propertyDocuments";
+
+    setCases((previous) =>
+      previous.map((item) =>
+        item.id === caseId
+          ? { ...item, [fieldName]: response.documents || documents }
+          : item,
+      ),
+    );
+    const sectionLabel = section === "student" ? "Student" : section === "parent" ? "Parent" : "Property";
+    toast.success(`${sectionLabel} documents saved.`);
+    return true;
+  };
+
+  const updateApplicationDetails = async (
+    caseId: string,
+    payload: Record<string, unknown>,
+  ) => {
+    const response = await updateLeadApi(caseId, payload);
+    if (!response.success) {
+      toast.error(response.error || "Failed to save application details.");
+      return false;
+    }
+
+    setCases((previous) =>
+      previous.map((item) => {
+        if (item.id !== caseId) return item;
+        const merged: DemoCase = {
+          ...item,
+          ...(payload["student"] !== undefined ? { student: String(payload["student"]) } : {}),
+          ...(payload["phone"] !== undefined ? { phone: String(payload["phone"]) } : {}),
+          ...(payload["alternativePhone"] !== undefined ? { alternativePhone: String(payload["alternativePhone"]) } : {}),
+          ...(payload["email"] !== undefined ? { email: String(payload["email"]) } : {}),
+          ...(payload["country"] !== undefined ? { country: String(payload["country"]) } : {}),
+          ...(payload["planningCountry"] !== undefined ? { planningCountry: String(payload["planningCountry"]) } : {}),
+          ...(payload["studyCountry"] !== undefined ? { studyCountry: String(payload["studyCountry"]) } : {}),
+          ...(payload["course"] !== undefined ? { course: String(payload["course"]) } : {}),
+          ...(payload["intake"] !== undefined ? { intake: String(payload["intake"]) } : {}),
+          ...(payload["university"] !== undefined ? { university: String(payload["university"]) } : {}),
+          ...(payload["loanRequirement"] !== undefined ? { loanRequirement: String(payload["loanRequirement"]) } : {}),
+          ...(payload["loanType"] === "Secured" || payload["loanType"] === "Unsecured" ? { loanType: payload["loanType"] } : {}),
+          ...(typeof payload["amount"] === "number" ? { amount: payload["amount"] } : {}),
+          ...(payload["source"] !== undefined ? { source: String(payload["source"]) } : {}),
+          ...(payload["sourceName"] !== undefined ? { sourceName: String(payload["sourceName"]) } : {}),
+          coApplicant: payload["coApplicant"]
+            ? { ...item.coApplicant, ...(payload["coApplicant"] as Partial<DemoCase["coApplicant"]>) }
+            : item.coApplicant,
+          academics: payload["academics"]
+            ? { ...item.academics, ...(payload["academics"] as Partial<DemoCase["academics"]>) }
+            : item.academics,
+          guarantor: payload["guarantor"]
+            ? {
+                name: "",
+                relation: "",
+                phone: "",
+                email: "",
+                employment: "",
+                organisation: "",
+                monthlyIncome: 0,
+                address: "",
+                ...item.guarantor,
+                ...(payload["guarantor"] as Partial<NonNullable<DemoCase["guarantor"]>>),
+              }
+            : item.guarantor,
+          collateral: payload["collateral"]
+            ? {
+                type: "",
+                location: "",
+                marketValue: 0,
+                owner: "",
+                ...item.collateral,
+                ...(payload["collateral"] as Partial<NonNullable<DemoCase["collateral"]>>),
+              }
+            : item.collateral,
+        };
+        return merged;
+      }),
+    );
+    toast.success("Application details saved.");
+    return true;
   };
 
   return (
@@ -1521,7 +2047,13 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
         addComment,
         updateLender,
         markLenderRejected,
+        submitToLender,
+        updateLenderDecision,
+        rerouteToNewLender,
         updateReferralSource,
+        updateApplicationDocuments,
+        updateApplicationDetails,
+        updateDocumentSectionStatus,
         addCase,
         resetCases,
       }}
@@ -1538,4 +2070,3 @@ export function useCases() {
   }
   return ctx;
 }
-

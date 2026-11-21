@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "sales" | "processing" | "viewer";
+export type UserRole = "telecom" | "relationship_manager" | "manager" | "superadmin";
 
 export interface UserProfile {
   id: string;
@@ -11,37 +11,37 @@ export interface UserProfile {
 }
 
 export const MOCK_USERS: Record<UserRole, UserProfile> = {
-  admin: {
-    id: "usr_admin_01",
+  superadmin: {
+    id: "usr_superadmin_01",
     name: "Venkatesh Kota",
     email: "venkatesh.k@normiloans.com",
-    role: "admin",
+    role: "superadmin",
     roleTitle: "Founder & Managing Director",
     department: "Executive Management",
   },
-  sales: {
-    id: "usr_sales_01",
+  telecom: {
+    id: "usr_telecom_01",
     name: "Praveen K",
     email: "praveen.k@normiloans.com",
-    role: "sales",
-    roleTitle: "Senior Tele-Calling & Sales Exec",
-    department: "Sales & Lead Gen",
+    role: "telecom",
+    roleTitle: "Telecom Team",
+    department: "Telecom & Lead Generation",
   },
-  processing: {
-    id: "usr_proc_01",
+  relationship_manager: {
+    id: "usr_rm_01",
     name: "Nikhil V",
     email: "nikhil.v@normiloans.com",
-    role: "processing",
-    roleTitle: "Lead Loan Processing Officer",
-    department: "Credit & Bank Operations",
+    role: "relationship_manager",
+    roleTitle: "Relationship Manager",
+    department: "Relationship & Credit Operations",
   },
-  viewer: {
-    id: "usr_view_01",
+  manager: {
+    id: "usr_manager_01",
     name: "Swathi Sharma",
     email: "swathi.s@auditors.com",
-    role: "viewer",
-    roleTitle: "External Auditor / Operations Viewer",
-    department: "Audit & Compliance",
+    role: "manager",
+    roleTitle: "Manager",
+    department: "Operations Management",
   },
 };
 
@@ -69,7 +69,7 @@ export type Permission =
   | "activity_log:view";
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  admin: [
+  superadmin: [
     "dashboard:view",
     "leads:view",
     "leads:create",
@@ -92,7 +92,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "users:manage",
     "activity_log:view",
   ],
-  sales: [
+  telecom: [
     "dashboard:view",
     "leads:view",
     "leads:create",
@@ -100,7 +100,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "followups:manage",
     "cases:view_assigned",
   ],
-  processing: [
+  relationship_manager: [
     "dashboard:view",
     "cases:view_all",
     "cases:view_assigned",
@@ -113,7 +113,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "disbursements:view",
     "disbursements:manage",
   ],
-  viewer: [
+  manager: [
     "dashboard:view",
     "leads:view",
     "cases:view_all",
@@ -135,5 +135,5 @@ export function canEdit(role: UserRole): boolean {
 }
 
 export function isReadOnly(role: UserRole): boolean {
-  return role === "viewer";
+  return role === "manager";
 }

@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Download } from "lucide-react";
 
 import { AppShell } from "@/components/crm/AppShell";
 import { Button } from "@/components/ui/button";
 import { LENDERS } from "@/lib/demo-data";
+import { exportLendersToExcel } from "@/lib/export-utils";
 
 export const Route = createFileRoute("/_authenticated/lenders")({
   ssr: false,
@@ -22,7 +24,23 @@ function Lenders() {
     <AppShell
       title="Lender partners"
       subtitle="Banks and NBFCs currently on the panel"
-      action={<Button size="sm" className="font-semibold shadow-md shadow-primary/20">Add lender</Button>}
+      action={
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="font-semibold border-2 border-border bg-card hover:bg-muted shadow-xs gap-1.5"
+            onClick={() => exportLendersToExcel(LENDERS, "lender_partners_performance")}
+            title="Export all lender partners to Excel"
+          >
+            <Download className="size-4 text-emerald-600" />
+            <span>Export to Excel</span>
+          </Button>
+          <Button size="sm" className="font-semibold shadow-md shadow-primary/20">
+            Add lender
+          </Button>
+        </div>
+      }
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {LENDERS.map((l) => (

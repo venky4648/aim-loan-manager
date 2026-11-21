@@ -47,7 +47,7 @@ export function FollowUpManager({ record }: FollowUpManagerProps) {
   } = useCases();
 
   const isHandedOver = record.handover?.isHandedOver ?? false;
-  const isSalesOrAdmin = role === "sales" || role === "admin";
+  const isSalesOrAdmin = role === "telecom" || role === "superadmin";
   const canEdit = isSalesOrAdmin && !isHandedOver;
 
   const [activeTab, setActiveTab] = useState<"active" | "overdue" | "completed" | "all">("active");
@@ -566,4 +566,3 @@ export function FollowUpManager({ record }: FollowUpManagerProps) {
     </section>
   );
 }
-

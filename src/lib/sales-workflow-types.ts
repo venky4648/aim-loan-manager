@@ -24,6 +24,30 @@ export type DocCollectionStatus =
 
 export type DocVerificationStatus = "Pending" | "Verified" | "Rejected";
 
+export type LenderStatus =
+  | "Not Assigned"
+  | "Submitted"
+  | "In Underwriting"
+  | "Approved"
+  | "Sanctioned"
+  | "Disbursed"
+  | "Rejected";
+
+export interface LenderSubmissionRecord {
+  id: string;
+  lender: string;
+  applicationNo?: string | undefined;
+  status: LenderStatus;
+  submittedAt: string;
+  submittedBy: string;
+  decisionAt?: string | undefined;
+  rejectionReason?: string | undefined;
+  sanctionAmount?: number | undefined;
+  roi?: number | undefined;
+  tenure?: number | undefined;
+  notes?: string | undefined;
+}
+
 export interface FollowUpRecord {
   id: string;
   caseId: string;
@@ -74,6 +98,11 @@ export interface ActivityItem {
     | "document_update"
     | "ready_for_processing"
     | "handover"
+    | "lender_submit"
+    | "underwriting"
+    | "sanction"
+    | "disbursement"
+    | "reroute"
     | "comment"
     | "system";
   description: string;

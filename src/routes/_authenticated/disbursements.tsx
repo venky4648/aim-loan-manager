@@ -1,8 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Download } from "lucide-react";
 
 import { AppShell, StatCard } from "@/components/crm/AppShell";
+import { Button } from "@/components/ui/button";
 import { CASES, formatINR, formatLakh } from "@/lib/demo-data";
+import { exportDisbursementsToExcel } from "@/lib/export-utils";
 
 export const Route = createFileRoute("/_authenticated/disbursements")({
   ssr: false,
@@ -22,7 +24,25 @@ function Disbursements() {
   const rows = CASES.filter((c) => c.sanctioned);
 
   return (
-    <AppShell title="Disbursement & payouts" subtitle="Reconcile what the lender released and what you earned">
+    <AppShell
+      title="Disbursement & payouts"
+      subtitle="Reconcile what the lender released and what you earned"
+      action={
+        <Button
+          size="sm"
+          variant="outline"
+          className="font-semibold border-2 border-border bg-card hover:bg-muted shadow-xs gap-1.5"
+          onClick={() => exportDisbursementsToExcel(rows, "disbursements_payouts")}
+          title={`Export ${rows.length} cases to Excel`}
+        >
+          <Download className="size-4 text-emerald-600" />
+          <span>Export to Excel</span>
+          <span className="text-[11px] bg-muted px-1.5 py-0.5 rounded font-mono text-muted-foreground font-normal">
+            ({rows.length})
+          </span>
+        </Button>
+      }
+    >
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Disbursed this month" value="₹2.4 Cr" hint="9 tranches released" />
         <StatCard label="Commission booked" value="₹11.4 L" hint="Total revenue earned" accent />

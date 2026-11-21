@@ -24,16 +24,12 @@ export const STAGES: CaseStage[] = [
 ];
 
 export const REFERRAL_SOURCES = [
-  "Referral — Student / Alumni",
-  "Referral — Friends & Family",
-  "Channel partner / Consultant",
-  "College / University Partner",
-  "Website inquiry form",
-  "Instagram / Social Media",
-  "Walk-in / Office visit",
-  "Direct Tele-calling / Inbound call",
-  "Education Fair / Seminar",
-  "Other",
+  "Customer reference",
+  "Employee referral",
+  "DSA/Connector",
+  "Walk in",
+  "Digital marketing",
+  "Offline Marketing",
 ] as const;
 
 export type ReferralSource = (typeof REFERRAL_SOURCES)[number];
@@ -45,53 +41,115 @@ import {
   CaseDocumentItem,
   HandoverInfo,
   ActivityItem,
+  LenderStatus,
+  LenderSubmissionRecord,
 } from "./sales-workflow-types";
 
 export type DemoCase = {
   id: string;
   student: string;
   phone: string;
+  alternativePhone?: string | undefined;
   email: string;
   country: string;
+  planningCountry?: string | undefined;
+  studyCountry?: string | undefined;
   course: string;
   intake: string;
   university: string;
   loanType: "Secured" | "Unsecured";
   amount: number;
+  loanRequirement?: string | undefined;
   stage: CaseStage;
   lender: string;
   owner: string;
   source: string;
+  sourceName?: string | undefined;
   updated: string;
-  roi?: number;
-  tenure?: number;
-  sanctioned?: number;
-  disbursed?: number;
-  commission?: number;
-  commissionReceived?: boolean;
+  roi?: number | undefined;
+  tenure?: number | undefined;
+  sanctioned?: number | undefined;
+  disbursed?: number | undefined;
+  commission?: number | undefined;
+  commissionReceived?: boolean | undefined;
   coApplicant: {
     name: string;
     relation: string;
-    employment: "Salaried" | "Self-employed";
+    contact?: string | undefined;
+    phone?: string | undefined;
+    alternativePhone?: string | undefined;
+    email?: string | undefined;
+    employment: string;
     organisation: string;
+    workplace?: string | undefined;
+    vintage?: string | undefined;
     monthlyIncome: number;
+    annualIncome?: number | undefined;
     obligations: number;
     city: string;
+    currentAddress?: string | undefined;
+    permanentAddress?: string | undefined;
   };
   collateral?: {
+    hasCollateral?: "Yes" | "No" | "" | undefined;
     type: string;
     location: string;
     marketValue: number;
     owner: string;
   } | undefined;
-  academics: { tenth: string; twelfth: string; graduation: string; tests: string; experience: string };
+  academics: {
+    tenth: string;
+    twelfth: string;
+    graduation: string;
+    tests: string;
+    greScore?: string | undefined;
+    gmatScore?: string | undefined;
+    satScore?: string | undefined;
+    ieltsScore?: string | undefined;
+    toeflScore?: string | undefined;
+    duolingoScore?: string | undefined;
+    experience: string;
+  };
+  guarantor?: {
+    hasGuarantor?: "Yes" | "No" | undefined;
+    name: string;
+    relation: string;
+    contact?: string | undefined;
+    phone: string;
+    alternativePhone?: string | undefined;
+    email: string;
+    employment: string;
+    organisation: string;
+    workplace?: string | undefined;
+    vintage?: string | undefined;
+    monthlyIncome: number;
+    annualIncome?: number | undefined;
+    obligations?: number | undefined;
+    address: string;
+    currentAddress?: string | undefined;
+    permanentAddress?: string | undefined;
+  } | undefined;
+  studentDocuments?: { id: string; name: string; type: string; fileName?: string | undefined; fileUrl?: string | undefined; mimeType?: string | undefined; size?: number | undefined; status: "Pending" | "Uploaded"; collectionStatus?: "Not Received" | "Partially Received" | "Received" | undefined; category?: string | undefined; dynamic?: boolean | undefined }[] | undefined;
+  parentDocuments?: { id: string; name: string; type: string; fileName?: string | undefined; fileUrl?: string | undefined; mimeType?: string | undefined; size?: number | undefined; status: "Pending" | "Uploaded"; collectionStatus?: "Not Received" | "Partially Received" | "Received" | undefined; category?: string | undefined; dynamic?: boolean | undefined }[] | undefined;
+  propertyDocuments?: { id: string; name: string; type: string; fileName?: string | undefined; fileUrl?: string | undefined; mimeType?: string | undefined; size?: number | undefined; status: "Pending" | "Uploaded"; collectionStatus?: "Not Received" | "Partially Received" | "Received" | undefined; category?: string | undefined; dynamic?: boolean | undefined }[] | undefined;
+  studentDocumentsStatus?: "Not Received" | "Partially Received" | "Received" | undefined;
+  parentDocumentsStatus?: "Not Received" | "Partially Received" | "Received" | undefined;
+  propertyDocumentsStatus?: "Not Received" | "Partially Received" | "Received" | undefined;
+  documentStatusesUpdatedAt?: string | undefined;
+  documentStatusesUpdatedBy?: string | undefined;
   documents: { name: string; status: "Received" | "Pending" | "Verified" }[];
   timeline: { date: string; label: string; by: string }[];
   // Extended Sales Workflow Fields
   contactStatus?: ContactStatus | undefined;
   interestStatus?: InterestStatus | undefined;
   notInterestedReason?: string | undefined;
+  lenderStatus?: LenderStatus | undefined;
+  lenderApplicationNo?: string | undefined;
+  lenderSubmittedAt?: string | undefined;
+  lenderSubmittedBy?: string | undefined;
+  lenderLocked?: boolean | undefined;
   lenderRejectionReason?: string | undefined;
+  lenderSubmissions?: LenderSubmissionRecord[] | undefined;
   followUps?: FollowUpRecord[] | undefined;
   workflowDocuments?: CaseDocumentItem[] | undefined;
   handover?: HandoverInfo | undefined;
@@ -113,7 +171,8 @@ export const CASES: DemoCase[] = [
     stage: "Sanctioned",
     lender: "Avanse Financial Services",
     owner: "Praveen K",
-    source: "Referral — Hyderabad",
+    source: "Customer reference",
+    sourceName: "Rajesh Reddy (Alumni)",
     updated: "2 hours ago",
     roi: 11.25,
     tenure: 120,
@@ -164,7 +223,8 @@ export const CASES: DemoCase[] = [
     stage: "Disbursed",
     lender: "HDFC Credila",
     owner: "Shruti M",
-    source: "Website form",
+    source: "Digital marketing",
+    sourceName: "Google Search Ads",
     updated: "Yesterday",
     roi: 10.5,
     tenure: 144,
@@ -222,7 +282,8 @@ export const CASES: DemoCase[] = [
     stage: "Sent to Lender",
     lender: "Auxilo",
     owner: "Praveen K",
-    source: "Tele-calling",
+    source: "Employee referral",
+    sourceName: "Divya (Tele-calling Team)",
     updated: "3 days ago",
     coApplicant: {
       name: "Fatima Begum",
@@ -265,7 +326,8 @@ export const CASES: DemoCase[] = [
     stage: "Qualified",
     lender: "Not assigned",
     owner: "Shruti M",
-    source: "Instagram campaign",
+    source: "Digital marketing",
+    sourceName: "Instagram Campaign",
     updated: "4 days ago",
     coApplicant: {
       name: "Anil Sharma",
@@ -313,7 +375,8 @@ export const CASES: DemoCase[] = [
     stage: "New Lead",
     lender: "Not assigned",
     owner: "Unassigned",
-    source: "Channel partner — Warangal",
+    source: "DSA/Connector",
+    sourceName: "Warangal Edu Partner",
     updated: "Today",
     coApplicant: {
       name: "Vijaya Varma",
@@ -348,7 +411,8 @@ export const CASES: DemoCase[] = [
     stage: "Rejected",
     lender: "ICICI Bank",
     owner: "Praveen K",
-    source: "Walk-in — Hyderabad",
+    source: "Walk in",
+    sourceName: "Hyderabad Main Branch",
     updated: "1 week ago",
     coApplicant: {
       name: "Srinivas Teja",

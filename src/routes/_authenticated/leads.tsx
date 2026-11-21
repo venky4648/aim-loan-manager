@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, UserPlus, Filter, ArrowRight, Clock, CheckCircle2, AlertCircle, Share2 } from "lucide-react";
+import { Search, UserPlus, Filter, ArrowRight, Clock, CheckCircle2, AlertCircle, Share2, Download } from "lucide-react";
+import { exportLeadsToExcel } from "@/lib/export-utils";
 
 import { AppShell, StageBadge } from "@/components/crm/AppShell";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,7 @@ function Leads() {
   const [stage, setStage] = useState<string>("All");
   const [workflowFilter, setWorkflowFilter] = useState<string>("All");
   const [sourceFilter, setSourceFilter] = useState<string>("All");
-  const [myFilter, setMyFilter] = useState<boolean>(role === "sales" || role === "processing");
+  const [myFilter, setMyFilter] = useState<boolean>(role === "telecom" || role === "relationship_manager");
   const [addLeadOpen, setAddLeadOpen] = useState(false);
 
   const rows = useMemo(() => {
@@ -84,10 +85,10 @@ function Leads() {
 
       // 3. Ownership filter for sales/processing
       if (myFilter) {
-        if (role === "sales") {
+        if (role === "telecom") {
           return (c.owner && c.owner.includes("Praveen")) || c.stage === "New Lead" || c.stage === "Contacted";
         }
-        if (role === "processing") {
+        if (role === "relationship_manager") {
           return c.stage === "Docs Collected" || c.stage === "Sent to Lender" || c.stage === "Logged In" || c.handover?.isHandedOver;
         }
       }
@@ -95,7 +96,7 @@ function Leads() {
       // 4. Search Query
       const q = query.toLowerCase();
       return (
-        `${c.student} ${c.id} ${c.university} ${c.lender} ${c.owner} ${c.phone} ${c.interestStatus || ""}`
+        `${c.student} ${c.id} ${c.university} ${c.lender} ${c.owner} ${c.phone} ${c.source || ""} ${c.sourceName || ""} ${c.interestStatus || ""}`
           .toLowerCase()
           .includes(q)
       );
@@ -106,29 +107,46 @@ function Leads() {
 
   return (
     <AppShell
-      title={role === "sales" ? "My Leads & Follow-ups" : role === "processing" ? "Assigned Cases for Processing" : "Leads & pipeline"}
+      title={role === "telecom" ? "My Leads & Follow-ups" : role === "relationship_manager" ? "Assigned Cases for Relationship Management" : "Leads & pipeline"}
       subtitle="Every applicant from first call to college joining"
       action={
-        canCreateLead ? (
+        <div className="flex items-center gap-2">
           <Button
             size="sm"
-            className="font-semibold shadow-md shadow-primary/20"
-            onClick={() => setAddLeadOpen(true)}
+            variant="outline"
+            className="font-semibold border-2 border-border bg-card hover:bg-muted shadow-xs gap-1.5"
+            onClick={() => exportLeadsToExcel(rows, "leads_pipeline")}
+            title={`Export ${rows.length} leads to Excel`}
           >
-            <UserPlus className="mr-1.5 size-4" /> Add lead
+            <Download className="size-4 text-emerald-600" />
+            <span className="hidden sm:inline">Export to Excel</span>
+            <span className="sm:hidden">Export</span>
+            <span className="text-[11px] bg-muted px-1.5 py-0.5 rounded font-mono text-muted-foreground font-normal">
+              ({rows.length})
+            </span>
           </Button>
-        ) : undefined
+
+          {canCreateLead && (
+            <Button
+              size="sm"
+              className="font-semibold shadow-md shadow-primary/20"
+              onClick={() => setAddLeadOpen(true)}
+            >
+              <UserPlus className="mr-1.5 size-4" /> Add lead
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="surface-card p-5 border-2 border-border rounded-xl">
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by student name, phone, case ID, interest status, lender..."
-              className="pl-9 border-2 border-border"
+              placeholder="Search by student, phone, case ID, referral source, referral name, lender..."
+              className="h-12 pl-11 text-base border-2 border-border"
             />
           </div>
 
@@ -146,7 +164,7 @@ function Leads() {
             </select>
           </div>
 
-          {(role === "sales" || role === "processing") && (
+          {(role === "telecom" || role === "relationship_manager") && (
             <Button
               variant={myFilter ? "default" : "outline"}
               size="sm"
@@ -158,15 +176,15 @@ function Leads() {
               }
             >
               <Filter className={`mr-1.5 size-3.5 ${myFilter ? "text-white" : "text-foreground"}`} />
-              {myFilter ? (role === "sales" ? "Showing My Assigned Leads" : "Showing My Processing Queue") : "Show All Pipeline Cases"}
+              {myFilter ? (role === "telecom" ? "Showing My Assigned Leads" : "Showing My Relationship Manager Queue") : "Show All Pipeline Cases"}
             </Button>
           )}
         </div>
 
         {/* Workflow Filters */}
-        <div className="mt-3.5 pt-3 border-t-2 border-border flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        <div className="mt-4 border-t-2 border-border pt-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
               Sales Workflow Filter:
             </span>
             {(workflowFilter !== "All" || stage !== "All" || sourceFilter !== "All") && (
@@ -183,7 +201,7 @@ function Leads() {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9">
             {[
               "All",
               "Interested",
@@ -198,7 +216,7 @@ function Leads() {
               <button
                 key={wf}
                 onClick={() => setWorkflowFilter(wf)}
-                className={`rounded-full px-3 py-1 text-xs font-bold transition-all border ${
+                className={`min-h-11 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold transition-all border text-center ${
                   workflowFilter === wf
                     ? "bg-primary text-white border-primary shadow-xs"
                     : "bg-card text-foreground border-border hover:bg-muted"
@@ -210,15 +228,16 @@ function Leads() {
           </div>
 
           {/* Stage Filter Tabs */}
-          <div className="pt-2 flex flex-wrap gap-1.5 border-t border-border/60">
-            <span className="text-[11px] font-bold text-muted-foreground self-center mr-1">
-              Stage:
+          <div className="mt-4 border-t border-border/60 pt-4">
+            <span className="mb-2 block text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              Stage
             </span>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-11">
             {["All", ...STAGES].map((s) => (
               <button
                 key={s}
                 onClick={() => setStage(s)}
-                className={`rounded-md px-2.5 py-0.5 text-[11px] transition-all font-semibold ${
+                className={`min-h-12 whitespace-normal rounded-lg px-3 py-2 text-center text-sm leading-tight transition-all font-semibold ${
                   stage === s
                     ? "bg-[#1E3A5F] text-white font-bold shadow-xs"
                     : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -227,6 +246,7 @@ function Leads() {
                 {s}
               </button>
             ))}
+            </div>
           </div>
         </div>
       </div>
@@ -275,7 +295,9 @@ function Leads() {
                         {c.id} · {c.phone}
                       </p>
                       <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-700 px-2 py-0.5 text-[11px] font-semibold mt-1 whitespace-nowrap">
-                        <Share2 className="size-3 text-blue-600" /> {c.source || "Website inquiry form"}
+                        <Share2 className="size-3 text-blue-600" />
+                        <span>{c.source || "Customer reference"}</span>
+                        {c.sourceName && <span className="font-normal text-blue-900/80">({c.sourceName})</span>}
                       </span>
                     </td>
 

@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Download } from "lucide-react";
 
 import { AppShell } from "@/components/crm/AppShell";
 import { Button } from "@/components/ui/button";
 import { CASES, FUNNEL, LENDERS } from "@/lib/demo-data";
+import { exportReportsToExcel } from "@/lib/export-utils";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   ssr: false,
@@ -32,8 +34,15 @@ function Reports() {
       title="Reports"
       subtitle="Conversion, destination mix and team performance"
       action={
-        <Button size="sm" variant="outline">
-          Export to Excel
+        <Button
+          size="sm"
+          variant="outline"
+          className="font-semibold border-2 border-border bg-card hover:bg-muted shadow-xs gap-1.5"
+          onClick={() => exportReportsToExcel(FUNNEL, byCountry, byOwner, "reports_analytics")}
+          title="Export analytics report to Excel"
+        >
+          <Download className="size-4 text-emerald-600" />
+          <span>Export to Excel</span>
         </Button>
       }
     >

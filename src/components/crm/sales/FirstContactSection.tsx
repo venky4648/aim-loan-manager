@@ -46,7 +46,7 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
   const { updateFirstContact, reactivateLead, updateInterestStatus } = useCases();
 
   const isHandedOver = record.handover?.isHandedOver ?? false;
-  const isSalesOrAdmin = role === "sales" || role === "admin";
+  const isSalesOrAdmin = role === "telecom" || role === "superadmin";
   const canEdit = isSalesOrAdmin && !isHandedOver;
 
   // Dialog State
@@ -468,4 +468,3 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
     </section>
   );
 }
-

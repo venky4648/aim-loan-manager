@@ -2,313 +2,455 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, UserCheck, Share2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useCases } from "@/lib/cases-context";
-import { REFERRAL_SOURCES } from "@/lib/demo-data";
+import {
+  DocumentUploadSection,
+  type UploadedDocumentEntry,
+} from "@/components/crm/DocumentUploadSection";
 
-export interface StudentRegistrationFormData {
-  fullName: string;
-  mobile: string;
-  email: string;
-  country: string;
-  university: string;
-  course: string;
-  source: string;
-}
+const STUDENT_DOCUMENT_CATEGORIES = [
+  { title: "KYC Details", names: ["Aadhaar Card", "PAN Card", "Bank Passbook", "Passport"] },
+  { title: "Academic Details", names: ["10th Class Certificate / Marks Memo", "Intermediate Certificate / Marks Memo", "Graduation Certificate / Marks Memo"] },
+];
+const PARENT_DOCUMENT_CATEGORIES = [
+  { title: "Parent KYC Details", names: ["Aadhaar Card", "PAN Card", "Bank Passbook / Bank Details"] },
+  { title: "Salary / Income Details", names: ["Salary Certificate", "Payslips", "Form 16", "Income Tax Returns (ITR)", "Bank Statements", "Business Registration Certificate"] },
+];
+const PROPERTY_DOCUMENT_CATEGORIES = [
+  { title: "Property Ownership Details", names: ["Sale Deed", "Linked Documents"] },
+  { title: "Income Tax Documents", names: ["Income Tax Documents"] },
+];
+const RELATIONSHIP_OPTIONS = ["Parent","Father","Mother","Spouse","Brother","Sister","Son","Daughter","Grandfather","Grandmother","Father-in-law","Mother-in-law","Brother-in-law","Sister-in-law","Guardian","Relative","Friend","Other"];
+const PROFESSION_OPTIONS = ["Salaried","Self-Employed / Business","Agriculture"];
 
-export type FormErrors = Partial<Record<keyof StudentRegistrationFormData, string>>;
-
-const INITIAL_DATA: StudentRegistrationFormData = {
+const EMPTY_DATA = {
   fullName: "",
-  mobile: "",
   email: "",
-  country: "",
+  mobile: "",
+  alternativePhone: "",
+  planningCountry: "",
+  studyCountry: "",
   university: "",
-  course: "",
-  source: "Website inquiry form",
+  loanRequirement: "",
+  loanAmount: "",
+  loanType: "" as "" | "Secured" | "Unsecured",
+  tenthScore: "",
+  tenthYear: "",
+  twelfthScore: "",
+  twelfthYear: "",
+  degree: "",
+  branch: "",
+  college: "",
+  graduationScore: "",
+  graduationYear: "",
+  greScore: "",
+  gmatScore: "",
+  satScore: "",
+  ieltsScore: "",
+  toeflScore: "",
+  duolingoScore: "",
+  workExperience: "",
+  coApplicantName: "",
+  coApplicantRelation: "",
+  coApplicantPhone: "",
+  coApplicantAlternativePhone: "",
+  coApplicantEmail: "",
+  coApplicantEmployment: "",
+  coApplicantOrganisation: "",
+  coApplicantWorkplace: "",
+  coApplicantVintage: "",
+  coApplicantIncome: "",
+  coApplicantAnnualIncome: "",
+  coApplicantObligations: "",
+  coApplicantAddress: "",
+  coApplicantCurrentAddress: "",
+  coApplicantPermanentAddress: "",
+  studentDocuments: [] as UploadedDocumentEntry[],
+  parentDocuments: [] as UploadedDocumentEntry[],
+  propertyDocuments: [] as UploadedDocumentEntry[],
+  propertyType: "",
+  propertyLocation: "",
+  propertyMarketValue: "",
+  propertyOwner: "",
+  hasGuarantor: "No" as "Yes" | "No",
+  guarantorName: "",
+  guarantorRelation: "",
+  guarantorPhone: "",
+  guarantorAlternativePhone: "",
+  guarantorEmail: "",
+  guarantorEmployment: "",
+  guarantorOrganisation: "",
+  guarantorWorkplace: "",
+  guarantorVintage: "",
+  guarantorIncome: "",
+  guarantorAnnualIncome: "",
+  guarantorObligations: "",
+  guarantorAddress: "",
+  guarantorCurrentAddress: "",
+  guarantorPermanentAddress: "",
 };
+
+type FormData = typeof EMPTY_DATA;
+
+function numberValue(value: string) {
+  const number = Number(value.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(number) ? number : 0;
+}
 
 export function StudentRegistrationForm() {
   const { addCase } = useCases();
-  const [formData, setFormData] = useState<StudentRegistrationFormData>(INITIAL_DATA);
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [formData, setFormData] = useState<FormData>(EMPTY_DATA);
+  const [submitted, setSubmitted] = useState(false);
 
-  const updateField = (field: keyof StudentRegistrationFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
+  const update = (field: keyof FormData, value: string) => {
+    setFormData((previous) => ({ ...previous, [field]: value }));
   };
 
-  const validate = (): boolean => {
-    const errs: FormErrors = {};
-
-    // Section 1 Validation
-    if (!formData.fullName.trim()) {
-      errs.fullName = "Full name is required";
-    }
-
-    if (!formData.mobile.trim()) {
-      errs.mobile = "Mobile number is required";
-    } else if (!/^[0-9+\-\s]{8,15}$/.test(formData.mobile.trim())) {
-      errs.mobile = "Enter a valid mobile number";
-    }
-
-    if (!formData.email.trim()) {
-      errs.email = "Email address is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      errs.email = "Enter a valid email address";
-    }
-
-    // Section 2 Validation
-    if (!formData.country) {
-      errs.country = "Please select target country";
-    }
-
-    if (!formData.university.trim()) {
-      errs.university = "College / University name is required";
-    }
-
-    if (!formData.course) {
-      errs.course = "Please select target course";
-    }
-
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+  const submit = () => {
+    addCase({
+      student: formData.fullName,
+      phone: formData.mobile,
+      alternativePhone: formData.alternativePhone,
+      email: formData.email,
+      planningCountry: formData.planningCountry,
+      country: formData.studyCountry,
+      studyCountry: formData.studyCountry,
+      university: formData.university,
+      course: "",
+      amount: numberValue(formData.loanAmount),
+      loanRequirement: formData.loanRequirement,
+      loanType: formData.loanType || "Unsecured",
+      coApplicant: {
+        name: formData.coApplicantName,
+        relation: formData.coApplicantRelation || "Parent",
+        contact: formData.coApplicantPhone,
+        phone: formData.coApplicantPhone,
+        alternativePhone: formData.coApplicantAlternativePhone,
+        email: formData.coApplicantEmail,
+        employment: formData.coApplicantEmployment || "Salaried",
+        organisation: formData.coApplicantOrganisation,
+        workplace: formData.coApplicantWorkplace,
+        vintage: formData.coApplicantVintage,
+        monthlyIncome: numberValue(formData.coApplicantIncome),
+        annualIncome: numberValue(formData.coApplicantAnnualIncome),
+        obligations: numberValue(formData.coApplicantObligations),
+        city: formData.coApplicantAddress,
+        currentAddress: formData.coApplicantCurrentAddress,
+        permanentAddress: formData.coApplicantPermanentAddress,
+      },
+      academics: {
+        tenth: formData.tenthScore,
+        twelfth: formData.twelfthScore,
+        graduation: [formData.degree, formData.branch, formData.college, formData.graduationScore, formData.graduationYear].filter(Boolean).join(" - "),
+        tests: "",
+        greScore: formData.greScore,
+        gmatScore: formData.gmatScore,
+        satScore: formData.satScore,
+        ieltsScore: formData.ieltsScore,
+        toeflScore: formData.toeflScore,
+        duolingoScore: formData.duolingoScore,
+        experience: formData.workExperience,
+      },
+      guarantor: formData.hasGuarantor === "Yes" ? {
+        hasGuarantor: "Yes",
+        name: formData.guarantorName,
+        relation: formData.guarantorRelation,
+        contact: formData.guarantorPhone,
+        phone: formData.guarantorPhone,
+        alternativePhone: formData.guarantorAlternativePhone,
+        email: formData.guarantorEmail,
+        employment: formData.guarantorEmployment,
+        organisation: formData.guarantorOrganisation,
+        workplace: formData.guarantorWorkplace,
+        vintage: formData.guarantorVintage,
+        monthlyIncome: numberValue(formData.guarantorIncome),
+        annualIncome: numberValue(formData.guarantorAnnualIncome),
+        obligations: numberValue(formData.guarantorObligations),
+        address: formData.guarantorAddress,
+        currentAddress: formData.guarantorCurrentAddress,
+        permanentAddress: formData.guarantorPermanentAddress,
+      } : undefined,
+      collateral: {
+        hasCollateral: formData.propertyType || formData.propertyLocation ? "Yes" : "",
+        type: formData.propertyType,
+        location: formData.propertyLocation,
+        marketValue: numberValue(formData.propertyMarketValue),
+        owner: formData.propertyOwner,
+      },
+      studentDocuments: formData.studentDocuments,
+      parentDocuments: formData.parentDocuments,
+      propertyDocuments: formData.propertyDocuments,
+    });
+    setSubmitted(true);
+    toast.success("Student lead submitted successfully.");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (validate()) {
-      setIsSubmitted(true);
-      addCase({
-        student: formData.fullName,
-        phone: formData.mobile,
-        email: formData.email,
-        country: formData.country,
-        university: formData.university,
-        course: formData.course,
-        source: formData.source || "Website inquiry form",
-      });
-      toast.success("Registration details submitted successfully.");
-    } else {
-      toast.error("Please fill in all required fields correctly.");
-    }
-  };
-
-  const handleReset = () => {
-    setFormData(INITIAL_DATA);
-    setErrors({});
-    setIsSubmitted(false);
-  };
-
-  if (isSubmitted) {
+  if (submitted) {
     return (
-      <div className="surface-card p-8 sm:p-10 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
-        <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-success/15 text-success">
-          <CheckCircle2 className="size-10" />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Registration details submitted successfully.
-          </h2>
-          <p className="mx-auto max-w-md text-sm text-muted-foreground leading-relaxed">
-            Thank you, <span className="font-semibold text-foreground">{formData.fullName}</span>! Your education loan registration request has been submitted.
-          </p>
-        </div>
-
-        <div className="pt-2">
-          <Button onClick={handleReset} variant="outline" size="sm" className="font-semibold">
-            Submit Another Registration
-          </Button>
-        </div>
+      <div className="surface-card p-8 text-center">
+        <CheckCircle2 className="mx-auto size-14 text-success" />
+        <h2 className="mt-4 text-2xl font-bold">Lead submitted successfully</h2>
+        <Button className="mt-6" variant="outline" onClick={() => { setFormData(EMPTY_DATA); setStep(1); setSubmitted(false); }}>
+          Submit Another Registration
+        </Button>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="surface-card p-6 sm:p-8 space-y-8 shadow-xl">
-      <div className="border-b border-border pb-4">
-        <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider">
-          <UserCheck className="size-4" />
-          <span>Student Loan Registration</span>
-        </div>
-        <h2 className="mt-1 text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Start Your Loan Application
-        </h2>
-        <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-          Enter your contact details and target study information below.
-        </p>
+    <form
+      onSubmit={(event) => { event.preventDefault(); submit(); }}
+      className="surface-card space-y-6 p-6 shadow-xl sm:p-8"
+    >
+      <div>
+        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">Step {step} of 2</span>
+        <h2 className="mt-2 text-xl font-bold">{step === 1 ? "Student Details" : "Supporting Application Details"}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">All fields are optional.</p>
+        <Progress value={step * 50} className="mt-3 h-2" />
       </div>
 
-      {/* SECTION 1 — BASIC REGISTRATION */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-border/60 pb-2">
-          Section 1 — Basic Registration
-        </h3>
-
+      {step === 1 ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="fullName" className="font-medium">
-              Full Name <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="fullName"
-              placeholder="e.g. Sai Charan Reddy"
-              value={formData.fullName}
-              onChange={(e) => updateField("fullName", e.target.value)}
-              className={errors.fullName ? "border-destructive focus-visible:ring-destructive" : ""}
-            />
-            {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
-          </div>
-
+          <FormField label="Student Name" id="fullName" value={formData.fullName} onChange={(value) => update("fullName", value)} />
+          <FormField label="Email" id="email" type="email" value={formData.email} onChange={(value) => update("email", value)} />
+          <FormField label="Phone Number" id="mobile" value={formData.mobile} onChange={(value) => update("mobile", value)} />
+          <FormField label="Alternative Number" id="alternativePhone" value={formData.alternativePhone} onChange={(value) => update("alternativePhone", value)} />
+          <FormField label="Country of Planning" id="planningCountry" value={formData.planningCountry} onChange={(value) => update("planningCountry", value)} />
+          <FormField label="Country to Study" id="studyCountry" value={formData.studyCountry} onChange={(value) => update("studyCountry", value)} />
+          <FormField label="Target University" id="university" value={formData.university} onChange={(value) => update("university", value)} />
+          <FormField label="Loan Requirement" id="loanRequirement" value={formData.loanRequirement} onChange={(value) => update("loanRequirement", value)} />
+          <FormField label="Loan Amount" id="loanAmount" value={formData.loanAmount} onChange={(value) => update("loanAmount", value)} />
           <div className="space-y-1.5">
-            <Label htmlFor="mobile" className="font-medium">
-              Mobile Number <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="mobile"
-              placeholder="+91 98490 21188"
-              value={formData.mobile}
-              onChange={(e) => updateField("mobile", e.target.value)}
-              className={errors.mobile ? "border-destructive focus-visible:ring-destructive" : ""}
-            />
-            {errors.mobile && <p className="text-xs text-destructive">{errors.mobile}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="font-medium">
-              Email Address <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="student@example.com"
-              value={formData.email}
-              onChange={(e) => updateField("email", e.target.value)}
-              className={errors.email ? "border-destructive focus-visible:ring-destructive" : ""}
-            />
-            {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 2 — STUDENT & STUDY DETAILS */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-border/60 pb-2">
-          Section 2 — Student & Study Details
-        </h3>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="country" className="font-medium">
-              Target Country <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="loanType" className="font-medium">Loan Type Preference</Label>
             <select
-              id="country"
-              value={formData.country}
-              onChange={(e) => updateField("country", e.target.value)}
-              className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring ${
-                errors.country ? "border-destructive" : ""
-              }`}
+              id="loanType"
+              value={formData.loanType}
+              onChange={(event) => update("loanType", event.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
             >
-              <option value="">Select Target Country</option>
-              <option value="UK">UK</option>
-              <option value="USA">USA</option>
-              <option value="Australia">Australia</option>
-              <option value="Canada">Canada</option>
-              <option value="Germany">Germany</option>
-              <option value="Ireland">Ireland</option>
-              <option value="India">India</option>
-              <option value="Other">Other</option>
+              <option value="">Select Loan Preference (Optional)</option>
+              <option value="Unsecured">Unsecured (No Collateral)</option>
+              <option value="Secured">Secured (With Property/FD Collateral)</option>
             </select>
-            {errors.country && <p className="text-xs text-destructive">{errors.country}</p>}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="course" className="font-medium">
-              Course Planning to Study <span className="text-destructive">*</span>
-            </Label>
-            <select
-              id="course"
-              value={formData.course}
-              onChange={(e) => updateField("course", e.target.value)}
-              className={`w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring ${
-                errors.course ? "border-destructive" : ""
-              }`}
-            >
-              <option value="">Select Course Type</option>
-              <option value="MS">MS</option>
-              <option value="MBA">MBA</option>
-              <option value="UG">UG</option>
-              <option value="Medicine">Medicine</option>
-              <option value="Other">Other</option>
-            </select>
-            {errors.course && <p className="text-xs text-destructive">{errors.course}</p>}
-          </div>
-
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="university" className="font-medium">
-              College / University Name <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="university"
-              placeholder="e.g. Arizona State University / University of Manchester"
-              value={formData.university}
-              onChange={(e) => updateField("university", e.target.value)}
-              className={errors.university ? "border-destructive focus-visible:ring-destructive" : ""}
-            />
-            {errors.university && <p className="text-xs text-destructive">{errors.university}</p>}
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-8">
+          <Section title="Academic Details">
+            <FormField label="10th Score" id="tenthScore" value={formData.tenthScore} onChange={(value) => update("tenthScore", value)} />
+            <FormField label="10th Passing Year" id="tenthYear" value={formData.tenthYear} onChange={(value) => update("tenthYear", value)} />
+            <FormField label="12th Score" id="twelfthScore" value={formData.twelfthScore} onChange={(value) => update("twelfthScore", value)} />
+            <FormField label="12th Passing Year" id="twelfthYear" value={formData.twelfthYear} onChange={(value) => update("twelfthYear", value)} />
+            <FormField label="Degree / Course" id="degree" value={formData.degree} onChange={(value) => update("degree", value)} />
+            <FormField label="Branch / Specialization" id="branch" value={formData.branch} onChange={(value) => update("branch", value)} />
+            <FormField label="College / University" id="college" value={formData.college} onChange={(value) => update("college", value)} />
+            <FormField label="Graduation Score" id="graduationScore" value={formData.graduationScore} onChange={(value) => update("graduationScore", value)} />
+            <FormField label="Passing Year" id="graduationYear" value={formData.graduationYear} onChange={(value) => update("graduationYear", value)} />
+            <FormField label="GRE" id="greScore" value={formData.greScore} onChange={(value) => update("greScore", value)} />
+            <FormField label="GMAT" id="gmatScore" value={formData.gmatScore} onChange={(value) => update("gmatScore", value)} />
+            <FormField label="SAT" id="satScore" value={formData.satScore} onChange={(value) => update("satScore", value)} />
+            <FormField label="IELTS" id="ieltsScore" value={formData.ieltsScore} onChange={(value) => update("ieltsScore", value)} />
+            <FormField label="TOEFL" id="toeflScore" value={formData.toeflScore} onChange={(value) => update("toeflScore", value)} />
+            <FormField label="Duolingo" id="duolingoScore" value={formData.duolingoScore} onChange={(value) => update("duolingoScore", value)} />
+            <FormField label="Work Experience" id="workExperience" value={formData.workExperience} onChange={(value) => update("workExperience", value)} />
+          </Section>
 
-      {/* SECTION 3 — REFERRAL / LEAD SOURCE */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-border/60 pb-2 flex items-center gap-1.5">
-          <Share2 className="size-3.5" />
-          <span>Section 3 — Referral & Lead Source</span>
-        </h3>
+          <Section title="Co-applicant Details">
+            <FormField label="Co-applicant Full Name" id="coApplicantName" value={formData.coApplicantName} onChange={(value) => update("coApplicantName", value)} />
+            <SelectField label="Relationship" id="coApplicantRelation" value={formData.coApplicantRelation} options={RELATIONSHIP_OPTIONS} placeholder="Select relationship" onChange={(value) => update("coApplicantRelation", value)} />
+            <FormField label="Contact Number" id="coApplicantContact" value={formData.coApplicantPhone} onChange={(value) => update("coApplicantPhone", value)} />
+            <FormField label="Alternative Mobile Number" id="coApplicantAlternativePhone" value={formData.coApplicantAlternativePhone} onChange={(value) => update("coApplicantAlternativePhone", value)} />
+            <FormField label="Email ID" id="coApplicantEmail" type="email" value={formData.coApplicantEmail} onChange={(value) => update("coApplicantEmail", value)} />
+            <SelectField label="Profession" id="coApplicantEmployment" value={formData.coApplicantEmployment} options={PROFESSION_OPTIONS} placeholder="Select Profession" onChange={(value) => update("coApplicantEmployment", value)} />
+            <FormField label="Organisation / Business Name" id="coApplicantOrg" value={formData.coApplicantOrganisation} onChange={(value) => update("coApplicantOrganisation", value)} />
+            <FormField label="Place of Work / City" id="coApplicantWorkplace" value={formData.coApplicantWorkplace} onChange={(value) => update("coApplicantWorkplace", value)} />
+            <FormField label="Work / Business Vintage" id="coApplicantVintage" value={formData.coApplicantVintage} onChange={(value) => update("coApplicantVintage", value)} placeholder="e.g. 5 years" />
+            <FormField label="Monthly Income (₹)" id="coApplicantMonthlyIncome" value={formData.coApplicantIncome} onChange={(value) => update("coApplicantIncome", value)} />
+            <FormField label="Annual Income (₹)" id="coApplicantAnnualIncome" value={formData.coApplicantAnnualIncome} onChange={(value) => update("coApplicantAnnualIncome", value)} />
+            <FormField label="Existing Loan Obligations (₹/month)" id="coApplicantObligations" value={formData.coApplicantObligations} onChange={(value) => update("coApplicantObligations", value)} />
+            <div className="sm:col-span-2"><FormField label="Place of Work / City" id="coApplicantAddress" value={formData.coApplicantAddress} onChange={(value) => update("coApplicantAddress", value)} /></div>
+            <TextareaField label="Current Address" id="coApplicantCurrentAddress" value={formData.coApplicantCurrentAddress} onChange={(value) => update("coApplicantCurrentAddress", value)} />
+            <TextareaField label="Permanent Address" id="coApplicantPermanentAddress" value={formData.coApplicantPermanentAddress} onChange={(value) => update("coApplicantPermanentAddress", value)} />
+          </Section>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="source" className="font-medium">
-            How did you hear about us? (Referral Source) <span className="text-destructive">*</span>
-          </Label>
-          <select
-            id="source"
-            value={formData.source}
-            onChange={(e) => updateField("source", e.target.value)}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          >
-            {REFERRAL_SOURCES.map((src) => (
-              <option key={src} value={src}>
-                {src}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-muted-foreground">
-            Helps our sales and processing teams attribute and fast-track your student loan file.
-          </p>
+          <DocumentUploadSection
+            title="Student Documents"
+            categories={STUDENT_DOCUMENT_CATEGORIES}
+            documents={formData.studentDocuments}
+            onChange={(documents) => setFormData((previous) => ({ ...previous, studentDocuments: documents }))}
+          />
+          <DocumentUploadSection
+            title="Parent Documents"
+            categories={PARENT_DOCUMENT_CATEGORIES}
+            documents={formData.parentDocuments}
+            onChange={(documents) => setFormData((previous) => ({ ...previous, parentDocuments: documents }))}
+          />
+
+          <Section title="Property Documents">
+            <FormField label="Property Owner" id="propertyOwner" value={formData.propertyOwner} onChange={(value) => update("propertyOwner", value)} />
+            <FormField label="Property Type" id="propertyType" value={formData.propertyType} onChange={(value) => update("propertyType", value)} />
+            <FormField label="Property Location" id="propertyLocation" value={formData.propertyLocation} onChange={(value) => update("propertyLocation", value)} />
+            <FormField label="Market Value" id="propertyMarketValue" value={formData.propertyMarketValue} onChange={(value) => update("propertyMarketValue", value)} />
+            <div className="sm:col-span-2">
+              <DocumentUploadSection
+                title="Property Documents"
+                categories={PROPERTY_DOCUMENT_CATEGORIES}
+                documents={formData.propertyDocuments}
+                onChange={(documents) => setFormData((previous) => ({ ...previous, propertyDocuments: documents }))}
+              />
+            </div>
+          </Section>
+
+          <Section title="Guarantor Details">
+            <div className="sm:col-span-2 space-y-2">
+              <Label>Would you like to provide guarantor details?</Label>
+              <div className="flex gap-3">
+                {(["Yes", "No"] as const).map((option) => (
+                  <label
+                    key={option}
+                    className={`flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm ${
+                      formData.hasGuarantor === option
+                        ? "border-primary bg-primary/10 font-semibold text-primary"
+                        : "border-border bg-background"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="hasGuarantor"
+                      value={option}
+                      checked={formData.hasGuarantor === option}
+                      onChange={() => setFormData((previous) => ({ ...previous, hasGuarantor: option }))}
+                      className="accent-primary"
+                    />
+                    {option}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {formData.hasGuarantor === "Yes" && (
+              <>
+                <FormField label="Guarantor Full Name" id="guarantorName" value={formData.guarantorName} onChange={(value) => update("guarantorName", value)} />
+                <SelectField label="Relationship" id="guarantorRelation" value={formData.guarantorRelation} options={RELATIONSHIP_OPTIONS} placeholder="Select relationship" onChange={(value) => update("guarantorRelation", value)} />
+                <FormField label="Contact Number" id="guarantorContact" value={formData.guarantorPhone} onChange={(value) => update("guarantorPhone", value)} />
+                <FormField label="Alternative Mobile Number" id="guarantorAlternativePhone" value={formData.guarantorAlternativePhone} onChange={(value) => update("guarantorAlternativePhone", value)} />
+                <FormField label="Email ID" id="guarantorEmail" type="email" value={formData.guarantorEmail} onChange={(value) => update("guarantorEmail", value)} />
+                <SelectField label="Profession" id="guarantorEmployment" value={formData.guarantorEmployment} options={PROFESSION_OPTIONS} placeholder="Select Profession" onChange={(value) => update("guarantorEmployment", value)} />
+                <FormField label="Organisation / Business Name" id="guarantorOrg" value={formData.guarantorOrganisation} onChange={(value) => update("guarantorOrganisation", value)} />
+                <FormField label="Place of Work / City" id="guarantorWorkplace" value={formData.guarantorWorkplace} onChange={(value) => update("guarantorWorkplace", value)} />
+                <FormField label="Work / Business Vintage" id="guarantorVintage" value={formData.guarantorVintage} onChange={(value) => update("guarantorVintage", value)} placeholder="e.g. 5 years" />
+                <FormField label="Monthly Income (₹)" id="guarantorMonthlyIncome" value={formData.guarantorIncome} onChange={(value) => update("guarantorIncome", value)} />
+                <FormField label="Annual Income (₹)" id="guarantorAnnualIncome" value={formData.guarantorAnnualIncome} onChange={(value) => update("guarantorAnnualIncome", value)} />
+                <FormField label="Existing Loan Obligations (₹/month)" id="guarantorObligations" value={formData.guarantorObligations} onChange={(value) => update("guarantorObligations", value)} />
+                <div className="sm:col-span-2"><FormField label="Place of Work / City" id="guarantorAddress" value={formData.guarantorAddress} onChange={(value) => update("guarantorAddress", value)} /></div>
+                <TextareaField label="Current Address" id="guarantorCurrentAddress" value={formData.guarantorCurrentAddress} onChange={(value) => update("guarantorCurrentAddress", value)} />
+                <TextareaField label="Permanent Address" id="guarantorPermanentAddress" value={formData.guarantorPermanentAddress} onChange={(value) => update("guarantorPermanentAddress", value)} />
+              </>
+            )}
+          </Section>
         </div>
-      </div>
+      )}
 
-      {/* Submit Action */}
-      <div className="pt-4 border-t border-border">
-        <Button
-          type="submit"
-          size="lg"
-          className="w-full font-bold shadow-lg shadow-primary/20 text-base"
-        >
-          Submit Registration
-        </Button>
+      <div className="flex justify-between border-t border-border pt-4">
+        {step === 2 ? (
+          <Button type="button" variant="outline" onClick={() => setStep(1)}><ArrowLeft className="mr-2 size-4" />Back</Button>
+        ) : (
+          <span />
+        )}
+        {step === 1 ? (
+          <Button type="button" onClick={() => setStep(2)}>Next<ArrowRight className="ml-2 size-4" /></Button>
+        ) : (
+          <Button type="submit">Submit Lead<CheckCircle2 className="ml-2 size-4" /></Button>
+        )}
       </div>
     </form>
+  );
+}
+
+function FormField({
+  label,
+  id,
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+}: {
+  label: string;
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-4">
+      <h3 className="border-b border-border pb-2 text-sm font-bold text-primary">{title}</h3>
+      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+function SelectField({
+  label,
+  id,
+  value,
+  options,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  id: string;
+  value: string;
+  options: string[];
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function TextareaField({
+  label,
+  id,
+  value,
+  onChange,
+}: {
+  label: string;
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="sm:col-span-2 space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Textarea id={id} value={value} onChange={(event) => onChange(event.target.value)} />
+    </div>
   );
 }

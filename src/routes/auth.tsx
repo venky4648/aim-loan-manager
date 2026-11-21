@@ -29,7 +29,7 @@ export function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [selectedRole, setSelectedRole] = useState<UserRole>("sales");
+  const [selectedRole, setSelectedRole] = useState<UserRole>("telecom");
 
   const [busy, setBusy] = useState(false);
   const [registeredEmailSuccess, setRegisteredEmailSuccess] = useState<string | null>(null);
@@ -135,13 +135,13 @@ export function AuthPage() {
       } else {
         // Check for quick role logins as fallback for demo accounts
         if (email.includes("praveen") && password === "sales@2026") {
-          performLogin("sales", email, "Praveen K");
+          performLogin("telecom", email, "Praveen K");
         } else if (email.includes("nikhil") && password === "proc@2026") {
-          performLogin("processing", email, "Nikhil V");
+          performLogin("relationship_manager", email, "Nikhil V");
         } else if (email.includes("swathi") && password === "viewer@2026") {
-          performLogin("viewer", email, "Swathi Sharma");
+          performLogin("manager", email, "Swathi Sharma");
         } else if (email.includes("venkatesh") && password === "admin@2026") {
-          performLogin("admin", email, "Venkatesh Kota");
+          performLogin("superadmin", email, "Venkatesh Kota");
         } else {
           setBusy(false);
           toast.error(res.error || "Invalid credentials or pending registration.");
@@ -307,10 +307,10 @@ export function AuthPage() {
                       onChange={(e) => setSelectedRole(e.target.value as UserRole)}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <option value="admin">Admin / Owner (Founder & Managing Director)</option>
-                      <option value="sales">Sales Exec / Telecaller (Sales & Lead Gen)</option>
-                      <option value="processing">Processing Officer (Credit & Operations)</option>
-                      <option value="viewer">External Auditor / Viewer (Read-only)</option>
+                      <option value="superadmin">Admin / SUPERADMIN</option>
+                      <option value="telecom">Telecom Team</option>
+                      <option value="relationship_manager">Relationship Manager</option>
+                      <option value="manager">Manager</option>
                     </select>
                   </div>
                 )}

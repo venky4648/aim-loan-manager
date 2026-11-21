@@ -38,58 +38,58 @@ const ALL_NAV_ITEMS = [
     to: "/dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
-    roles: ["admin", "sales", "processing", "viewer"] as UserRole[],
+    roles: ["superadmin", "telecom", "relationship_manager", "manager"] as UserRole[],
   },
   {
     to: "/leads",
     label: "Leads & cases",
     labelMap: {
-      sales: "My Leads & Follow-ups",
-      processing: "Assigned Cases",
-      admin: "Leads & pipeline",
-      viewer: "All Cases & Pipeline",
+      telecom: "My Leads & Follow-ups",
+      relationship_manager: "Assigned Cases",
+      superadmin: "Leads & pipeline",
+      manager: "All Cases & Pipeline",
     },
     icon: Users,
-    roles: ["admin", "sales", "processing", "viewer"] as UserRole[],
+    roles: ["superadmin", "telecom", "relationship_manager", "manager"] as UserRole[],
   },
   {
     to: "/lenders",
     label: "Lender Panel",
     icon: Landmark,
-    roles: ["admin", "viewer"] as UserRole[],
+    roles: ["superadmin", "manager"] as UserRole[],
   },
   {
     to: "/disbursements",
     label: "Disbursement & Payouts",
     icon: BadgeIndianRupee,
-    roles: ["admin", "processing", "viewer"] as UserRole[],
+    roles: ["superadmin", "relationship_manager", "manager"] as UserRole[],
   },
   {
     to: "/reports",
     label: "Analytics & Reports",
     icon: BarChart3,
-    roles: ["admin", "viewer"] as UserRole[],
+    roles: ["superadmin", "manager"] as UserRole[],
   },
 ];
 
 const ROLE_BADGE_STYLE: Record<UserRole, { label: string; style: string; icon: any }> = {
-  admin: {
-    label: "Admin / Owner",
+  superadmin: {
+    label: "Admin / SUPERADMIN",
     style: "bg-primary/15 text-primary border-primary/30",
     icon: ShieldCheck,
   },
-  sales: {
-    label: "Sales Exec",
+  telecom: {
+    label: "Telecom Team",
     style: "bg-blue-500/15 text-blue-600 border-blue-500/30 dark:text-blue-400",
     icon: Headphones,
   },
-  processing: {
-    label: "Processing Exec",
+  relationship_manager: {
+    label: "Relationship Manager",
     style: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400",
     icon: FileText,
   },
-  viewer: {
-    label: "Viewer (Read-Only)",
+  manager: {
+    label: "Manager",
     style: "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
     icon: Eye,
   },
@@ -123,9 +123,9 @@ export function AppShell({
     navigate({ to: "/auth", replace: true });
   };
 
-  const safeRole = role || "admin";
+  const safeRole = role || "superadmin";
   const navItems = ALL_NAV_ITEMS.filter((item) => item.roles.includes(safeRole));
-  const currentBadge = ROLE_BADGE_STYLE[safeRole] || ROLE_BADGE_STYLE.admin;
+  const currentBadge = ROLE_BADGE_STYLE[safeRole] || ROLE_BADGE_STYLE.superadmin;
   const BadgeIcon = currentBadge.icon;
   const safeName = user?.name || "Staff User";
   const safeRoleTitle = user?.roleTitle || "Loan Officer";
@@ -138,7 +138,7 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col bg-sidebar px-5 py-6 text-sidebar-foreground md:flex border-r-2 border-[#1E3A5F] overflow-y-auto no-scrollbar">
+      <aside className="sticky top-0 hidden h-screen w-80 shrink-0 flex-col bg-sidebar px-5 py-6 text-sidebar-foreground md:flex border-r-2 border-[#1E3A5F] overflow-y-auto no-scrollbar">
         {/* Logo */}
         <Link to="/dashboard" className="mb-6 flex items-center px-1 py-2 transition-opacity hover:opacity-95">
           <NormiloansLogo variant="dark" size="lg" showTagline={true} />
@@ -172,7 +172,7 @@ export function AppShell({
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-sidebar-foreground/80 transition-all hover:bg-sidebar-accent hover:text-white"
+                className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-base font-medium text-sidebar-foreground/80 transition-all hover:bg-sidebar-accent hover:text-white"
                 activeProps={{
                   className: "bg-primary text-white font-semibold shadow-md shadow-primary/20",
                 }}
@@ -184,10 +184,10 @@ export function AppShell({
           })}
 
           {/* Quick Create Lead for Sales & Admin */}
-          {safeRole !== "viewer" && (
+          {safeRole !== "manager" && (
             <Link
               to="/student-registration"
-              className="mt-2 flex items-center gap-3 rounded-xl border-2 border-primary/40 bg-primary/10 px-3.5 py-2.5 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-white"
+              className="mt-2 flex items-center gap-3 rounded-xl border-2 border-primary/40 bg-primary/10 px-3.5 py-3 text-base font-semibold text-primary transition-all hover:bg-primary hover:text-white"
             >
               <UserPlus className="size-4 shrink-0" />
               Student Registration

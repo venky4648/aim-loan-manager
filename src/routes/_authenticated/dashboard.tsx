@@ -14,7 +14,9 @@ import {
   FileText,
   Eye,
   Share2,
+  Download,
 } from "lucide-react";
+import { exportLeadsToExcel } from "@/lib/export-utils";
 
 import { AppShell, StageBadge, StatCard } from "@/components/crm/AppShell";
 import { Button } from "@/components/ui/button";
@@ -54,7 +56,10 @@ function RoleBasedDashboard() {
   const { role, user } = useAuth();
   const [addLeadOpen, setAddLeadOpen] = useState(false);
 
-  const safeRole = role && ["admin", "sales", "processing", "viewer"].includes(role) ? role : "admin";
+  const safeRole =
+    role && ["superadmin", "telecom", "relationship_manager", "manager"].includes(role)
+      ? role
+      : "superadmin";
   const safeName = user?.name || "Staff User";
   const safeTitle = user?.roleTitle || "Loan Officer";
 
@@ -63,22 +68,35 @@ function RoleBasedDashboard() {
       title={`Welcome back, ${safeName}`}
       subtitle={`Role: ${safeTitle} · Hyderabad, Telangana`}
       action={
-        safeRole !== "viewer" ? (
+        <div className="flex items-center gap-2">
           <Button
             size="sm"
-            className="font-semibold shadow-md shadow-primary/20"
-            onClick={() => setAddLeadOpen(true)}
+            variant="outline"
+            className="font-semibold border-2 border-border bg-card hover:bg-muted shadow-xs gap-1.5"
+            onClick={() => exportLeadsToExcel(CASES, "normiloans_pipeline_cases")}
+            title="Export all cases to Excel"
           >
-            <UserPlus className="mr-1.5 size-4" /> Add lead
+            <Download className="size-4 text-emerald-600" />
+            <span className="hidden sm:inline">Export Excel</span>
           </Button>
-        ) : null
+
+          {safeRole !== "manager" ? (
+            <Button
+              size="sm"
+              className="font-semibold shadow-md shadow-primary/20"
+              onClick={() => setAddLeadOpen(true)}
+            >
+              <UserPlus className="mr-1.5 size-4" /> Add lead
+            </Button>
+          ) : null}
+        </div>
       }
     >
       {/* Role specific dashboard rendering */}
-      {safeRole === "admin" && <AdminDashboard />}
-      {safeRole === "sales" && <SalesDashboard />}
-      {safeRole === "processing" && <ProcessingDashboard />}
-      {safeRole === "viewer" && <ViewerDashboard />}
+      {safeRole === "superadmin" && <AdminDashboard />}
+      {safeRole === "telecom" && <SalesDashboard />}
+      {safeRole === "relationship_manager" && <ProcessingDashboard />}
+      {safeRole === "manager" && <ViewerDashboard />}
 
       <StudentRegistrationModal open={addLeadOpen} onOpenChange={setAddLeadOpen} />
     </AppShell>
@@ -202,9 +220,19 @@ function AdminDashboard() {
         <section className="surface-card overflow-hidden lg:col-span-2">
           <div className="flex items-center justify-between border-b border-border px-6 py-4">
             <h2 className="text-base font-semibold">Recent Case Activity</h2>
-            <Link to="/leads" className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-              View all pipeline <ArrowUpRight className="size-3.5" />
-            </Link>
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs font-semibold text-emerald-700 hover:bg-emerald-50 h-7 px-2 gap-1 cursor-pointer"
+                onClick={() => exportLeadsToExcel(validCases, "admin_cases_summary")}
+              >
+                <Download className="size-3.5" /> Export Excel
+              </Button>
+              <Link to="/leads" className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+                View all pipeline <ArrowUpRight className="size-3.5" />
+              </Link>
+            </div>
           </div>
           <ul className="divide-y divide-border">
             {validCases.slice(0, 5).map((c) => (
@@ -523,7 +551,9 @@ function SalesDashboard() {
                         <span className="text-xs text-muted-foreground">{c.id}</span>
                         <span className="text-muted-foreground/40">·</span>
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
-                          <Share2 className="size-2.5 text-blue-600" /> {c.source || "Website inquiry form"}
+                          <Share2 className="size-2.5 text-blue-600" />
+                          <span>{c.source || "Customer reference"}</span>
+                          {c.sourceName && <span className="font-normal text-blue-900/80">({c.sourceName})</span>}
                         </span>
                       </div>
                     </td>
@@ -733,9 +763,24 @@ function ProcessingDashboard() {
       <section className="surface-card overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <h2 className="text-base font-semibold">Cases Ready for Bank Submission</h2>
-          <Link to="/leads" className="text-xs font-semibold text-primary hover:underline">
-            View all processing cases →
-          </Link>
+          <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs font-semibold text-emerald-700 hover:bg-emerald-50 h-7 px-2 gap-1 cursor-pointer"
+              onClick={() =>
+                exportLeadsToExcel(
+                  CASES.filter((c) => c.stage === "Docs Collected" || c.stage === "Sent to Lender"),
+                  "processing_bank_submissions"
+                )
+              }
+            >
+              <Download className="size-3.5" /> Export Excel
+            </Button>
+            <Link to="/leads" className="text-xs font-semibold text-primary hover:underline">
+              View all processing cases →
+            </Link>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-sm">

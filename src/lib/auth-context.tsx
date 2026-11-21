@@ -13,8 +13,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const STORAGE_KEY = "normiloans_crm_role";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<UserRole>("admin");
-  const [currentUser, setCurrentUser] = useState<UserProfile>(MOCK_USERS.admin);
+  const [role, setRoleState] = useState<UserRole>("superadmin");
+  const [currentUser, setCurrentUser] = useState<UserProfile>(MOCK_USERS.superadmin);
 
   // Load saved role and user on client mount to avoid SSR hydration mismatches
   useEffect(() => {
@@ -23,10 +23,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (crmUserRaw) {
         const parsed = JSON.parse(crmUserRaw);
         const rawRole = parsed?.role ? String(parsed.role).toLowerCase() : "";
-        const matchedRole: UserRole =
-          rawRole && (MOCK_USERS as Record<string, UserProfile>)[rawRole]
-            ? (rawRole as UserRole)
-            : "admin";
+        const roleMap: Record<string, UserRole> = {
+          sales: "telecom",
+          processing: "relationship_manager",
+          viewer: "manager",
+          admin: "superadmin",
+          telecom: "telecom",
+          relationship_manager: "relationship_manager",
+          manager: "manager",
+          superadmin: "superadmin",
+        };
+        const matchedRole = roleMap[rawRole] || "superadmin";
         setRoleState(matchedRole);
         setCurrentUser({
           ...MOCK_USERS[matchedRole],
@@ -36,9 +43,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       const saved = localStorage.getItem(STORAGE_KEY) as UserRole;
-      if (saved && MOCK_USERS[saved]) {
-        setRoleState(saved);
-        setCurrentUser(MOCK_USERS[saved]);
+      const savedMap: Record<string, UserRole> = {
+        sales: "telecom",
+        processing: "relationship_manager",
+        viewer: "manager",
+        admin: "superadmin",
+      };
+      const savedRole = savedMap[saved] || (MOCK_USERS[saved] ? saved : "superadmin");
+      if (savedRole && MOCK_USERS[savedRole]) {
+        setRoleState(savedRole);
+        setCurrentUser(MOCK_USERS[savedRole]);
       }
     } catch (err) {
       console.warn("[AuthProvider] Error reading saved auth state:", err);
@@ -47,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setRole = (newRole: UserRole) => {
     const raw = String(newRole).toLowerCase() as UserRole;
-    const validRole: UserRole = MOCK_USERS[raw] ? raw : "sales";
+    const validRole: UserRole = MOCK_USERS[raw] ? raw : "telecom";
     setRoleState(validRole);
     setCurrentUser(MOCK_USERS[validRole]);
     if (typeof window !== "undefined") {
@@ -57,10 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const user = currentUser || MOCK_USERS[role] || MOCK_USERS.admin;
+  const user = currentUser || MOCK_USERS[role] || MOCK_USERS.superadmin;
 
   const hasPerm = (permission: Permission) => {
-    return hasPermission(role || "admin", permission);
+    return hasPermission(role || "superadmin", permission);
   };
 
   return (

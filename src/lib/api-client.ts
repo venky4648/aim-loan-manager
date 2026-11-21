@@ -30,7 +30,7 @@ export interface AuthResponse {
     id: string;
     name: string;
     email: string;
-    role: "admin" | "sales" | "processing" | "viewer" | "student";
+    role: "superadmin" | "telecom" | "relationship_manager" | "manager";
     roleTitle?: string;
     department?: string;
     mobile?: string;
@@ -281,6 +281,50 @@ export async function createLeadApi(
       success: false,
       error: "Unable to connect to backend server.",
     };
+  }
+}
+
+export async function uploadLeadDocumentsApi(
+  caseId: string,
+  section: "student" | "parent" | "property",
+  documents: Array<{
+    id: string;
+    name: string;
+    type: string;
+    category?: string | undefined;
+    collectionStatus?: "Not Received" | "Partially Received" | "Received" | undefined;
+    fileName?: string | undefined;
+    fileUrl?: string | undefined;
+    mimeType?: string | undefined;
+    size?: number | undefined;
+    status: "Pending" | "Uploaded";
+    file?: File | undefined;
+  }>,
+): Promise<{ success: boolean; documents?: any[]; error?: string }> {
+  try {
+    const formData = new FormData();
+    formData.append("section", section);
+    formData.append("documents", JSON.stringify(documents.map(({ file, ...metadata }) => metadata)));
+    const fileIds: string[] = [];
+    documents.forEach((document) => {
+      if (document.file) {
+        formData.append("files", document.file, document.fileName || document.file.name);
+        fileIds.push(document.id);
+      }
+    });
+    formData.append("fileIds", JSON.stringify(fileIds));
+
+    const res = await fetch(`${API_BASE_URL}/leads/${encodeURIComponent(caseId)}/documents/upload`, {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to upload documents." };
+    }
+    return data;
+  } catch {
+    return { success: false, error: "Unable to connect to backend server." };
   }
 }
 
@@ -703,6 +747,114 @@ export async function updateLeadLenderApi(
   }
 }
 
+export async function submitToLenderApi(
+  caseId: string,
+  payload: {
+    lender: string;
+    applicationNo?: string | undefined;
+    notes?: string | undefined;
+    authorName: string;
+  }
+): Promise<{ success: boolean; submission?: any; lead?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/leads/${encodeURIComponent(caseId)}/lender/submit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data.error || "Failed to submit lead to lender on backend.",
+      };
+    }
+
+    return data;
+  } catch (err) {
+    return {
+      success: false,
+      error: "Unable to connect to backend server.",
+    };
+  }
+}
+
+export async function updateLenderDecisionApi(
+  caseId: string,
+  payload: {
+    status: string;
+    rejectionReason?: string | undefined;
+    sanctionAmount?: number | undefined;
+    roi?: number | undefined;
+    tenure?: number | undefined;
+    notes?: string | undefined;
+    authorName: string;
+  }
+): Promise<{ success: boolean; lead?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/leads/${encodeURIComponent(caseId)}/lender/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data.error || "Failed to update lender decision on backend.",
+      };
+    }
+
+    return data;
+  } catch (err) {
+    return {
+      success: false,
+      error: "Unable to connect to backend server.",
+    };
+  }
+}
+
+export async function rerouteToNewLenderApi(
+  caseId: string,
+  payload: {
+    newLender: string;
+    applicationNo?: string | undefined;
+    reason?: string | undefined;
+    authorName: string;
+  }
+): Promise<{ success: boolean; submission?: any; lead?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/leads/${encodeURIComponent(caseId)}/lender/reroute`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data.error || "Failed to re-route lead to new lender on backend.",
+      };
+    }
+
+    return data;
+  } catch (err) {
+    return {
+      success: false,
+      error: "Unable to connect to backend server.",
+    };
+  }
+}
+
 export async function addCommentApi(
   caseId: string,
   payload: {
@@ -735,4 +887,3 @@ export async function addCommentApi(
     };
   }
 }
-
