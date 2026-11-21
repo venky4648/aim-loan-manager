@@ -138,7 +138,7 @@ export function AppShell({
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-80 shrink-0 flex-col bg-sidebar px-5 py-6 text-sidebar-foreground md:flex border-r-2 border-[#1E3A5F] overflow-y-auto no-scrollbar">
+      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col bg-sidebar px-5 py-6 text-sidebar-foreground md:flex border-r-2 border-[#1E3A5F] overflow-y-auto no-scrollbar">
         {/* Logo */}
         <Link to="/dashboard" className="mb-6 flex items-center px-1 py-2 transition-opacity hover:opacity-95">
           <NormiloansLogo variant="dark" size="lg" showTagline={true} />
@@ -172,7 +172,7 @@ export function AppShell({
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-base font-medium text-sidebar-foreground/80 transition-all hover:bg-sidebar-accent hover:text-white"
+                className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-sidebar-foreground/80 transition-all hover:bg-sidebar-accent hover:text-white"
                 activeProps={{
                   className: "bg-primary text-white font-semibold shadow-md shadow-primary/20",
                 }}
@@ -187,7 +187,7 @@ export function AppShell({
           {safeRole !== "manager" && (
             <Link
               to="/student-registration"
-              className="mt-2 flex items-center gap-3 rounded-xl border-2 border-primary/40 bg-primary/10 px-3.5 py-3 text-base font-semibold text-primary transition-all hover:bg-primary hover:text-white"
+              className="mt-2 flex items-center gap-3 rounded-xl border-2 border-primary/40 bg-primary/10 px-3.5 py-2.5 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-white"
             >
               <UserPlus className="size-4 shrink-0" />
               Student Registration

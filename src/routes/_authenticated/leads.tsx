@@ -146,7 +146,7 @@ function Leads() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by student, phone, case ID, referral source, referral name, lender..."
-              className="h-12 pl-11 text-base border-2 border-border"
+              className="h-10 pl-10 text-sm border-2 border-border"
             />
           </div>
 
@@ -216,7 +216,7 @@ function Leads() {
               <button
                 key={wf}
                 onClick={() => setWorkflowFilter(wf)}
-                className={`min-h-11 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold transition-all border text-center ${
+                className={`min-h-9 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold transition-all border text-center ${
                   workflowFilter === wf
                     ? "bg-primary text-white border-primary shadow-xs"
                     : "bg-card text-foreground border-border hover:bg-muted"
@@ -237,7 +237,7 @@ function Leads() {
               <button
                 key={s}
                 onClick={() => setStage(s)}
-                className={`min-h-12 whitespace-normal rounded-lg px-3 py-2 text-center text-sm leading-tight transition-all font-semibold ${
+                className={`min-h-9 whitespace-normal rounded-lg px-3 py-1.5 text-center text-xs leading-tight transition-all font-semibold ${
                   stage === s
                     ? "bg-[#1E3A5F] text-white font-bold shadow-xs"
                     : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground"
