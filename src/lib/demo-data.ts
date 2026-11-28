@@ -8,6 +8,7 @@ export type CaseStage =
   | "Sanctioned"
   | "Disbursed"
   | "Joined College"
+  | "Returned for Corrections"
   | "Rejected";
 
 export const STAGES: CaseStage[] = [
@@ -20,6 +21,7 @@ export const STAGES: CaseStage[] = [
   "Sanctioned",
   "Disbursed",
   "Joined College",
+  "Returned for Corrections",
   "Rejected",
 ];
 
@@ -153,6 +155,12 @@ export type DemoCase = {
   followUps?: FollowUpRecord[] | undefined;
   workflowDocuments?: CaseDocumentItem[] | undefined;
   handover?: HandoverInfo | undefined;
+  returnToSales?: {
+    isReturned?: boolean | undefined;
+    returnedAt?: string | undefined;
+    returnedBy?: string | undefined;
+    returnReason?: string | undefined;
+  } | undefined;
   activities?: ActivityItem[] | undefined;
 };
 
@@ -477,8 +485,416 @@ export const formatLakh = (value: number) => {
 };
 
 export const stageTone = (stage: CaseStage) => {
-  if (stage === "Rejected") return "destructive" as const;
+  if (stage === "Rejected" || stage === "Returned for Corrections") return "destructive" as const;
   if (stage === "Disbursed" || stage === "Joined College" || stage === "Sanctioned") return "success" as const;
   if (stage === "Sent to Lender" || stage === "Logged In") return "info" as const;
   return "muted" as const;
 };
+
+/* =========================================================================
+   LOAN PROCESSING MODULE TYPES & DATA
+   ========================================================================= */
+
+export type LoanApplicationStatus =
+  | "Draft"
+  | "Ready to Submit"
+  | "Submitted to Bank"
+  | "Under Review"
+  | "Additional Documents Required"
+  | "Query Raised"
+  | "Conditionally Approved"
+  | "Sanctioned"
+  | "Rejected"
+  | "Agreement Signed"
+  | "Disbursed"
+  | "Withdrawn"
+  | "Expired"
+  | "Closed";
+
+export interface BankQueryItem {
+  id: string;
+  queryDescription: string;
+  queryDate: string;
+  deadline?: string;
+  response?: string;
+  responseDate?: string;
+  status: "Open" | "Responded" | "Resolved";
+  supportingDocuments?: string[];
+  assignedRM?: string;
+}
+
+export interface PreDisbursementCondition {
+  id: string;
+  description: string;
+  requiredDoc?: string;
+  status: "Pending" | "Submitted" | "Under Verification" | "Verified" | "Rejected" | "Not Applicable";
+  submittedAt?: string;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  remarks?: string;
+  documentUrl?: string;
+}
+
+export interface SanctionRevisionItem {
+  previousAmount: number;
+  newAmount: number;
+  revisedAt: string;
+  revisedBy: string;
+  reason: string;
+}
+
+export interface SanctionDetailsInfo {
+  sanctionedAmount?: number;
+  interestRate?: number;
+  interestType?: "Fixed" | "Floating";
+  tenureMonths?: number;
+  moratoriumMonths?: number;
+  processingFee?: number;
+  otherCharges?: number;
+  sanctionDate?: string;
+  validityDate?: string;
+  bankRefNo?: string;
+  sanctionLetterUrl?: string;
+  specialConditions?: string;
+  rmRemarks?: string;
+  revisionHistory?: SanctionRevisionItem[];
+}
+
+export interface StudentAcceptanceInfo {
+  status: "Awaiting Student Response" | "Accepted" | "Rejected" | "Clarification Requested";
+  respondedAt?: string;
+  remarks?: string;
+  documentUrl?: string;
+}
+
+export interface AgreementTrackingInfo {
+  status: "Draft" | "Sent to Student" | "Student Signed" | "Co-applicant Signed" | "Stamp Duty Done" | "Executed" | "Uploaded";
+  executedAt?: string;
+  documentUrl?: string;
+  notes?: string;
+  stampDutyPaid?: boolean;
+  nachSubmitted?: boolean;
+}
+
+export interface StatusHistoryItem {
+  previousStatus: string;
+  newStatus: string;
+  updatedBy: string;
+  updatedAt: string;
+  remarks?: string;
+}
+
+export interface SelectedDocumentItem {
+  docId: string;
+  name: string;
+  category?: string;
+  fileUrl?: string;
+  isRequired?: boolean;
+}
+
+export interface LoanApplicationRecord {
+  id: string;
+  applicationId: string;
+  leadId: string;
+  studentName: string;
+  studentPhone?: string;
+  studentEmail?: string;
+  country?: string;
+  university?: string;
+  course?: string;
+  programType?: string;
+  loanProduct?: string;
+  remarks?: string;
+  lender: string;
+  requestedAmount: number;
+  assignedRM: string;
+  applicationStatus: LoanApplicationStatus;
+  lenderSpecificData?: Record<string, any>;
+  selectedDocuments?: SelectedDocumentItem[];
+  submissionDetails?: {
+    channel: "Bank Portal" | "Email" | "Branch Submission" | "Bank Representative" | "API Integration" | "Other";
+    referenceNumber: string;
+    submittedAt?: string;
+    submittedBy?: string;
+    acknowledgementUrl?: string;
+    notes?: string;
+  };
+  bankQueries?: BankQueryItem[];
+  sanctionDetails?: SanctionDetailsInfo;
+  studentAcceptance?: StudentAcceptanceInfo;
+  agreementDetails?: AgreementTrackingInfo;
+  conditions?: PreDisbursementCondition[];
+  statusHistory?: StatusHistoryItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DisbursementTranche {
+  id: string;
+  disbursementId: string;
+  loanApplicationId: string;
+  leadId: string;
+  studentName: string;
+  lender: string;
+  trancheNumber: number;
+  purpose: "Tuition Fees" | "Living Expenses" | "Travel / Insurance" | "University Housing" | "Other";
+  beneficiaryType: "University Direct" | "Student Account" | "Forex Card Vendor" | "Escrow Account" | "Other";
+  beneficiaryName: string;
+  requestedAmount: number;
+  approvedAmount: number;
+  actualDisbursedAmount: number;
+  status: "Planned" | "Request Submitted" | "Bank Processing" | "Disbursed" | "Failed" | "Cancelled";
+  paymentDate?: string;
+  transactionReference?: string;
+  supportingDocuments?: { title: string; url: string; uploadedAt?: string }[];
+  remarks?: string;
+  createdBy: string;
+  updatedBy?: string;
+  createdAt: string;
+}
+
+export interface LoanProcessingSummary {
+  totalApplications: number;
+  readyToSubmit: number;
+  submittedToBank: number;
+  underReview: number;
+  bankQueries: number;
+  sanctioned: number;
+  rejected: number;
+  agreementSigned?: number;
+  disbursed?: number;
+  totalSanctionedAmount: number;
+  totalDisbursedAmount: number;
+}
+
+export const INITIAL_LOAN_APPLICATIONS: LoanApplicationRecord[] = [
+  {
+    id: "app_1",
+    applicationId: "APP-HDF-982141",
+    leadId: "NL-1048",
+    studentName: "Ananya Sharma",
+    studentPhone: "+91 98490 12345",
+    studentEmail: "ananya.s@gmail.com",
+    country: "USA",
+    university: "Columbia University",
+    course: "MS in Data Science",
+    lender: "HDFC Credila",
+    requestedAmount: 4500000,
+    assignedRM: "Nikhil V (Lead Processing)",
+    applicationStatus: "Sanctioned",
+    submissionDetails: {
+      channel: "Bank Portal",
+      referenceNumber: "HDFC-PORTAL-81029",
+      submittedAt: "2026-11-20T10:30:00.000Z",
+      submittedBy: "Nikhil V",
+      notes: "Submitted via HDFC Credila partner portal with complete financial bundle.",
+    },
+    sanctionDetails: {
+      sanctionedAmount: 4200000,
+      interestRate: 10.75,
+      interestType: "Floating",
+      tenureMonths: 144,
+      moratoriumMonths: 6,
+      processingFee: 15000,
+      bankRefNo: "SAN-HDFC-9921",
+      sanctionDate: "2026-11-24T14:15:00.000Z",
+      validityDate: "2027-05-24T14:15:00.000Z",
+      rmRemarks: "Sanctioned under prime university unsecured education scheme.",
+      revisionHistory: [
+        {
+          previousAmount: 3800000,
+          newAmount: 4200000,
+          revisedAt: "2026-11-25T11:00:00.000Z",
+          revisedBy: "Credit Committee",
+          reason: "Increased based on co-applicant revised ITR.",
+        },
+      ],
+    },
+    studentAcceptance: {
+      status: "Accepted",
+      respondedAt: "2026-11-25T16:00:00.000Z",
+      remarks: "Student confirmed acceptance of 10.75% ROI offer.",
+    },
+    agreementDetails: {
+      status: "Executed",
+      executedAt: "2026-11-26T12:00:00.000Z",
+      notes: "Loan agreement executed with electronic stamping.",
+    },
+    conditions: [
+      {
+        id: "cp_1",
+        description: "Official University I-20 Form Copy",
+        requiredDoc: "I-20 Form",
+        status: "Verified",
+        submittedAt: "2026-11-22T10:00:00.000Z",
+        verifiedAt: "2026-11-23T11:00:00.000Z",
+        verifiedBy: "Nikhil V",
+      },
+      {
+        id: "cp_2",
+        description: "US F-1 Visa Stamp Copy",
+        requiredDoc: "Passport Visa Page",
+        status: "Pending",
+        remarks: "Visa interview scheduled for next week.",
+      },
+      {
+        id: "cp_3",
+        description: "Margin Money Proof (5% of First Semester)",
+        requiredDoc: "Student Bank Statement",
+        status: "Verified",
+        verifiedAt: "2026-11-26T15:00:00.000Z",
+      },
+    ],
+    createdAt: "2026-11-18T09:00:00.000Z",
+    updatedAt: "2026-11-26T15:00:00.000Z",
+  },
+  {
+    id: "app_2",
+    applicationId: "APP-AUX-471092",
+    leadId: "NL-1048",
+    studentName: "Ananya Sharma",
+    studentPhone: "+91 98490 12345",
+    studentEmail: "ananya.s@gmail.com",
+    country: "USA",
+    university: "Columbia University",
+    course: "MS in Data Science",
+    lender: "Auxilo",
+    requestedAmount: 4000000,
+    assignedRM: "Nikhil V (Lead Processing)",
+    applicationStatus: "Under Review",
+    submissionDetails: {
+      channel: "Email",
+      referenceNumber: "AUX-EMAIL-3312",
+      submittedAt: "2026-11-21T11:00:00.000Z",
+      submittedBy: "Nikhil V",
+      notes: "Under review with Auxilo south credit underwriting desk.",
+    },
+    bankQueries: [
+      {
+        id: "qry_1",
+        queryDescription: "Co-applicant company seal required on March 2026 payslip.",
+        queryDate: "2026-11-23T15:30:00.000Z",
+        status: "Resolved",
+        response: "Signed and stamped payslip re-uploaded.",
+        responseDate: "2026-11-24T10:00:00.000Z",
+      },
+    ],
+    createdAt: "2026-11-19T10:00:00.000Z",
+    updatedAt: "2026-11-24T10:00:00.000Z",
+  },
+  {
+    id: "app_3",
+    applicationId: "APP-AVN-582910",
+    leadId: "NL-1049",
+    studentName: "Rohan Varma",
+    studentPhone: "+91 99887 76655",
+    studentEmail: "rohan.v@outlook.com",
+    country: "UK",
+    university: "Imperial College London",
+    course: "MSc Finance",
+    lender: "Avanse Financial Services",
+    requestedAmount: 3800000,
+    assignedRM: "Praveen K",
+    applicationStatus: "Ready to Submit",
+    selectedDocuments: [
+      { docId: "d1", name: "Aadhaar & PAN", isRequired: true },
+      { docId: "d2", name: "Imperial Offer Letter", isRequired: true },
+      { docId: "d3", name: "Co-applicant ITR (3 Years)", isRequired: true },
+    ],
+    createdAt: "2026-11-25T14:00:00.000Z",
+    updatedAt: "2026-11-25T16:00:00.000Z",
+  },
+  {
+    id: "app_4",
+    applicationId: "APP-SBI-319082",
+    leadId: "NL-1049",
+    studentName: "Rohan Varma",
+    studentPhone: "+91 99887 76655",
+    studentEmail: "rohan.v@outlook.com",
+    country: "UK",
+    university: "Imperial College London",
+    course: "MSc Finance",
+    lender: "State Bank of India (SBI)",
+    requestedAmount: 3500000,
+    assignedRM: "Praveen K",
+    applicationStatus: "Draft",
+    createdAt: "2026-11-26T09:30:00.000Z",
+    updatedAt: "2026-11-26T09:30:00.000Z",
+  },
+  {
+    id: "app_5",
+    applicationId: "APP-INC-609124",
+    leadId: "NL-1051",
+    studentName: "Sneha Patel",
+    studentPhone: "+91 97654 32100",
+    studentEmail: "sneha.p@gmail.com",
+    country: "Canada",
+    university: "University of Toronto",
+    course: "MBA",
+    lender: "InCred",
+    requestedAmount: 5000000,
+    assignedRM: "Nikhil V (Lead Processing)",
+    applicationStatus: "Query Raised",
+    submissionDetails: {
+      channel: "Bank Portal",
+      referenceNumber: "INC-99410",
+      submittedAt: "2026-11-22T12:00:00.000Z",
+      submittedBy: "Nikhil V",
+    },
+    bankQueries: [
+      {
+        id: "qry_2",
+        queryDescription: "Property valuation report required for second co-applicant guarantee.",
+        queryDate: "2026-11-26T16:00:00.000Z",
+        deadline: "2026-12-02T18:00:00.000Z",
+        status: "Open",
+      },
+    ],
+    createdAt: "2026-11-20T11:00:00.000Z",
+    updatedAt: "2026-11-26T16:00:00.000Z",
+  },
+];
+
+export const INITIAL_DISBURSEMENTS: DisbursementTranche[] = [
+  {
+    id: "disb_1",
+    disbursementId: "DISB-88102",
+    loanApplicationId: "APP-HDF-982141",
+    leadId: "NL-1048",
+    studentName: "Ananya Sharma",
+    lender: "HDFC Credila",
+    trancheNumber: 1,
+    purpose: "Tuition Fees",
+    beneficiaryType: "University Direct",
+    beneficiaryName: "Columbia University Bursar Office",
+    requestedAmount: 2200000,
+    approvedAmount: 2200000,
+    actualDisbursedAmount: 2200000,
+    status: "Disbursed",
+    paymentDate: "2026-11-26T16:30:00.000Z",
+    transactionReference: "UTR-HDFC-992104821",
+    remarks: "Direct wire transfer to Columbia University tuition account.",
+    createdBy: "Nikhil V",
+    createdAt: "2026-11-24T10:00:00.000Z",
+  },
+  {
+    id: "disb_2",
+    disbursementId: "DISB-88103",
+    loanApplicationId: "APP-HDF-982141",
+    leadId: "NL-1048",
+    studentName: "Ananya Sharma",
+    lender: "HDFC Credila",
+    trancheNumber: 2,
+    purpose: "Living Expenses",
+    beneficiaryType: "Forex Card Vendor",
+    beneficiaryName: "Niyo Global Student Forex",
+    requestedAmount: 600000,
+    approvedAmount: 600000,
+    actualDisbursedAmount: 0,
+    status: "Bank Processing",
+    remarks: "Living expenses tranche for Spring 2027 semester.",
+    createdBy: "Nikhil V",
+    createdAt: "2026-11-26T11:00:00.000Z",
+  },
+];
+

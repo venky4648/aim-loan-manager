@@ -16,6 +16,7 @@ import {
   ChevronDown,
   UserPlus,
   RotateCcw,
+  Building2,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +54,12 @@ const ALL_NAV_ITEMS = [
     roles: ["superadmin", "telecom", "relationship_manager", "manager"] as UserRole[],
   },
   {
+    to: "/loan-processing",
+    label: "Loan Processing",
+    icon: Building2,
+    roles: ["superadmin", "relationship_manager", "manager", "telecom"] as UserRole[],
+  },
+  {
     to: "/lenders",
     label: "Lender Panel",
     icon: Landmark,
@@ -75,22 +82,22 @@ const ALL_NAV_ITEMS = [
 const ROLE_BADGE_STYLE: Record<UserRole, { label: string; style: string; icon: any }> = {
   superadmin: {
     label: "Admin / SUPERADMIN",
-    style: "bg-primary/15 text-primary border-primary/30",
+    style: "bg-slate-900 text-white border-slate-900",
     icon: ShieldCheck,
   },
   telecom: {
     label: "Telecom Team",
-    style: "bg-blue-500/15 text-blue-600 border-blue-500/30 dark:text-blue-400",
+    style: "bg-slate-100 text-slate-800 border-slate-300",
     icon: Headphones,
   },
   relationship_manager: {
     label: "Relationship Manager",
-    style: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30 dark:text-emerald-400",
+    style: "bg-slate-200 text-slate-900 border-slate-400 font-semibold",
     icon: FileText,
   },
   manager: {
     label: "Manager",
-    style: "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
+    style: "bg-slate-100 text-slate-700 border-slate-300",
     icon: Eye,
   },
 };
@@ -145,18 +152,18 @@ export function AppShell({
         </Link>
 
         {/* User Card inside Sidebar */}
-        <div className="mb-5 rounded-2xl border-2 border-[#1E3A5F] bg-sidebar-accent/40 p-3.5">
+        <div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900/60 p-3.5">
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-white font-bold text-sm shadow-sm">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-slate-800 text-white font-bold text-sm shadow-xs">
               {userInitials}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">{safeName}</p>
-              <p className="truncate text-xs text-sidebar-foreground/75">{safeRoleTitle}</p>
+              <p className="truncate text-xs text-slate-400">{safeRoleTitle}</p>
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-between border-t border-sidebar-border/60 pt-2.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-sidebar-foreground/60">Active Role</span>
+          <div className="mt-3 flex items-center justify-between border-t border-slate-800/80 pt-2.5">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Active Role</span>
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border ${currentBadge.style}`}>
               <BadgeIcon className="size-3" />
               {safeRole.toUpperCase()}
@@ -172,9 +179,9 @@ export function AppShell({
               <Link
                 key={item.to}
                 to={item.to}
-                className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-sidebar-foreground/80 transition-all hover:bg-sidebar-accent hover:text-white"
+                className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-300 transition-all hover:bg-slate-800/80 hover:text-white"
                 activeProps={{
-                  className: "bg-primary text-white font-semibold shadow-md shadow-primary/20",
+                  className: "bg-white text-slate-950 font-semibold shadow-xs",
                 }}
               >
                 <item.icon className="size-4 shrink-0" />
@@ -182,29 +189,18 @@ export function AppShell({
               </Link>
             );
           })}
-
-          {/* Quick Create Lead for Sales & Admin */}
-          {safeRole !== "manager" && (
-            <Link
-              to="/student-registration"
-              className="mt-2 flex items-center gap-3 rounded-xl border-2 border-primary/40 bg-primary/10 px-3.5 py-2.5 text-sm font-semibold text-primary transition-all hover:bg-primary hover:text-white"
-            >
-              <UserPlus className="size-4 shrink-0" />
-              Student Registration
-            </Link>
-          )}
         </nav>
 
         {/* Role Switcher Widget for Dev & Demo */}
-        <div className="mt-4 rounded-xl border-2 border-[#1E3A5F] bg-sidebar-accent/50 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/70">
+        <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Dev Mode Role Switcher
           </p>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="mt-2 w-full justify-between border-2 border-[#1E3A5F] bg-sidebar text-white hover:bg-sidebar-accent">
+              <Button variant="outline" size="sm" className="mt-2 w-full justify-between border border-slate-700 bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950">
                 <span className="flex items-center gap-2 truncate text-xs font-semibold">
-                  <UserCheck className="size-3.5 text-primary" />
+                  <UserCheck className="size-3.5 text-slate-300" />
                   {currentBadge.label}
                 </span>
                   <ChevronDown className="size-3 opacity-70" />
@@ -219,7 +215,7 @@ export function AppShell({
                 const Icon = badge.icon;
                 return (
                   <DropdownMenuItem key={r} onClick={() => setRole(r)} className="cursor-pointer">
-                    <Icon className="mr-2 size-4 text-primary" />
+                    <Icon className="mr-2 size-4 text-slate-700" />
                     <div>
                       <p className="text-xs font-bold">{u.roleTitle}</p>
                       <p className="text-[11px] text-muted-foreground">{u.name} ({r})</p>
@@ -228,7 +224,7 @@ export function AppShell({
                 );
               })}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={resetCases} className="cursor-pointer text-amber-600 font-semibold text-xs">
+              <DropdownMenuItem onClick={resetCases} className="cursor-pointer text-slate-700 font-semibold text-xs">
                 <RotateCcw className="mr-2 size-3.5" />
                 Reset Demo Data
               </DropdownMenuItem>
@@ -238,7 +234,7 @@ export function AppShell({
 
         <button
           onClick={signOut}
-          className="mt-4 flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-sidebar-foreground/75 transition-colors hover:bg-destructive/15 hover:text-destructive"
+          className="mt-4 flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
         >
           <LogOut className="size-4" />
           Sign out
@@ -248,7 +244,7 @@ export function AppShell({
       {/* Main Content Area */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
-        <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#CBD5E1] bg-card/95 px-5 py-4 backdrop-blur md:px-8">
+        <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card/95 px-5 py-4 backdrop-blur md:px-8">
           <div className="flex items-center gap-3 min-w-0">
             <div className="md:hidden">
               <NormiloansLogo variant="full-color" size="md" showTagline={true} />
@@ -272,11 +268,11 @@ export function AppShell({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="hidden sm:flex font-semibold text-xs gap-1.5 border-2 border-[#CBD5E1] bg-white text-[#0F2237] hover:bg-[#F1F5F9] hover:border-slate-400 transition-colors shadow-xs"
+                  className="hidden sm:flex font-semibold text-xs gap-1.5 border border-slate-300 bg-white text-slate-800 hover:bg-slate-100 hover:text-slate-950 transition-colors shadow-xs"
                 >
-                  <UserCheck className="size-3.5 text-[#F26500]" />
-                  <span>Role: <strong className="text-[#0F2237]">{safeName}</strong> ({safeRole})</span>
-                  <ChevronDown className="size-3 opacity-60 text-[#0F2237]" />
+                  <UserCheck className="size-3.5 text-slate-600" />
+                  <span>Role: <strong className="text-slate-900">{safeName}</strong> ({safeRole})</span>
+                  <ChevronDown className="size-3 opacity-60 text-slate-600" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -288,7 +284,7 @@ export function AppShell({
                   const Icon = badge.icon;
                   return (
                     <DropdownMenuItem key={r} onClick={() => setRole(r)} className="cursor-pointer">
-                      <Icon className="mr-2 size-4 text-primary" />
+                      <Icon className="mr-2 size-4 text-slate-700" />
                       <div>
                         <p className="text-xs font-bold">{u.name}</p>
                         <p className="text-[11px] text-muted-foreground">{u.roleTitle}</p>
@@ -297,7 +293,7 @@ export function AppShell({
                   );
                 })}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={resetCases} className="cursor-pointer text-amber-600 font-semibold text-xs">
+                <DropdownMenuItem onClick={resetCases} className="cursor-pointer text-slate-700 font-semibold text-xs">
                   <RotateCcw className="mr-2 size-3.5" />
                   Reset Demo Data
                 </DropdownMenuItem>
@@ -305,22 +301,22 @@ export function AppShell({
             </DropdownMenu>
 
             {action}
-            <Button variant="outline" size="sm" className="md:hidden text-[#0F2237] border-2 border-[#CBD5E1] hover:bg-[#F26500] hover:text-white" onClick={signOut}>
+            <Button variant="outline" size="sm" className="md:hidden text-slate-800 border border-slate-300 hover:bg-slate-100 hover:text-slate-950" onClick={signOut}>
               Sign out
             </Button>
           </div>
         </header>
 
         {/* Mobile Navigation bar */}
-        <nav className="flex gap-1 overflow-x-auto no-scrollbar border-b-2 border-[#CBD5E1] bg-card px-3 py-2 md:hidden">
+        <nav className="flex gap-1 overflow-x-auto no-scrollbar border-b border-border bg-card px-3 py-2 md:hidden">
           {navItems.map((item) => {
             const displayLabel = item.labelMap ? item.labelMap[safeRole] || item.label : item.label;
             return (
               <Link
                 key={item.to}
                 to={item.to}
-                className="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium text-[#0F2237] hover:bg-[#F26500]/10 hover:text-[#F26500] transition-colors"
-                activeProps={{ className: "bg-[#F26500] text-white font-semibold shadow-xs" }}
+                className="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-950 transition-colors"
+                activeProps={{ className: "bg-slate-900 text-white font-semibold shadow-xs" }}
               >
                 {displayLabel}
               </Link>
@@ -338,14 +334,14 @@ export function AppShell({
 export function StageBadge({ stage }: { stage: string }) {
   const tone =
     stage === "Rejected"
-      ? "bg-destructive/12 text-destructive font-semibold"
+      ? "bg-slate-200/80 text-slate-800 border-slate-300 font-semibold"
       : ["Sanctioned", "Disbursed", "Joined College"].includes(stage)
-        ? "bg-success/15 text-success font-semibold"
+        ? "bg-slate-900 text-white border-slate-900 font-semibold"
         : ["Sent to Lender", "Logged In"].includes(stage)
-          ? "bg-primary/15 text-primary font-semibold"
-          : "bg-secondary text-secondary-foreground font-medium";
+          ? "bg-slate-800 text-white border-slate-800 font-semibold"
+          : "bg-slate-100 text-slate-700 border-slate-300 font-medium";
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs whitespace-nowrap font-bold border border-border/40 ${tone}`}>{stage}</span>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs whitespace-nowrap font-medium border ${tone}`}>{stage}</span>
   );
 }
 

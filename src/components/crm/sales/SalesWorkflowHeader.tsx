@@ -167,22 +167,22 @@ export function SalesWorkflowHeader({ record }: SalesWorkflowHeaderProps) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {interest === "Interested" && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-500/30">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white border border-slate-900">
               <CheckCircle2 className="size-3.5" /> Interested Student
             </span>
           )}
           {interest === "Not Interested" && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-bold text-rose-700 border border-rose-500/30">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 border border-slate-300 line-through">
               <XCircle className="size-3.5" /> Not Interested
             </span>
           )}
           {interest === "Follow-up Required" && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-500/30">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-900 border border-slate-400">
               <Clock className="size-3.5" /> Follow-up Required
             </span>
           )}
           {interest === "Not Contacted" && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-500/15 px-3 py-1 text-xs font-bold text-slate-700 border border-slate-500/30">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-300">
               <HelpCircle className="size-3.5" /> Not Contacted
             </span>
           )}
@@ -206,9 +206,9 @@ export function SalesWorkflowHeader({ record }: SalesWorkflowHeaderProps) {
               key={st.num}
               className={`rounded-xl p-4 transition-all border flex flex-col justify-between ${
                 isCurrent
-                  ? "bg-primary/5 border-primary shadow-xs ring-2 ring-primary/20"
+                  ? "bg-slate-100/90 border-slate-900 shadow-xs ring-1 ring-slate-900/10"
                   : isPassed
-                  ? "bg-emerald-500/5 border-emerald-500/30"
+                  ? "bg-slate-50 border-slate-300"
                   : "bg-background/50 border-border/60 opacity-80"
               }`}
             >
@@ -216,11 +216,11 @@ export function SalesWorkflowHeader({ record }: SalesWorkflowHeaderProps) {
               <div className="flex items-center justify-between border-b border-border/60 pb-2.5">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${
+                    className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                       isPassed
-                        ? "bg-emerald-600 text-white"
+                        ? "bg-slate-900 text-white"
                         : isCurrent
-                        ? "bg-primary text-white"
+                        ? "bg-slate-700 text-white"
                         : "bg-muted text-muted-foreground border border-border"
                     }`}
                   >
@@ -231,11 +231,11 @@ export function SalesWorkflowHeader({ record }: SalesWorkflowHeaderProps) {
                   </span>
                 </div>
                 {isPassed ? (
-                  <span className="text-[10px] font-bold uppercase text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-bold uppercase text-slate-800 bg-slate-200/80 px-2 py-0.5 rounded">
                     Done
                   </span>
                 ) : isCurrent ? (
-                  <span className="text-[10px] font-bold uppercase text-primary bg-primary/10 px-2 py-0.5 rounded animate-pulse">
+                  <span className="text-[10px] font-bold uppercase text-slate-900 bg-slate-200 px-2 py-0.5 rounded">
                     Active
                   </span>
                 ) : (
@@ -252,7 +252,7 @@ export function SalesWorkflowHeader({ record }: SalesWorkflowHeaderProps) {
                     key={idx}
                     className={`p-2 rounded-lg border text-left flex flex-col justify-between transition-colors ${
                       sub.isAlert
-                        ? "bg-rose-500/10 border-rose-500/30"
+                        ? "bg-slate-100 border-slate-300 line-through"
                         : sub.isDone
                         ? "bg-card border-border/80"
                         : "bg-muted/40 border-border/40"
@@ -264,9 +264,9 @@ export function SalesWorkflowHeader({ record }: SalesWorkflowHeaderProps) {
                     <span
                       className={`text-xs font-bold mt-1 truncate block ${
                         sub.isAlert
-                          ? "text-rose-600 font-extrabold"
+                          ? "text-slate-500 line-through"
                           : sub.isDone
-                          ? "text-emerald-700"
+                          ? "text-slate-900"
                           : "text-foreground/80"
                       }`}
                       title={sub.value}

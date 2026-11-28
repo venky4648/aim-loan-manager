@@ -118,7 +118,7 @@ function Leads() {
             onClick={() => exportLeadsToExcel(rows, "leads_pipeline")}
             title={`Export ${rows.length} leads to Excel`}
           >
-            <Download className="size-4 text-emerald-600" />
+            <Download className="size-4 text-slate-700" />
             <span className="hidden sm:inline">Export to Excel</span>
             <span className="sm:hidden">Export</span>
             <span className="text-[11px] bg-muted px-1.5 py-0.5 rounded font-mono text-muted-foreground font-normal">
@@ -255,7 +255,7 @@ function Leads() {
       <div className="surface-card mt-5 overflow-hidden border-2 border-border rounded-xl shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1280px] text-sm">
-            <thead className="bg-[#EDF3FD] text-left text-xs uppercase tracking-wide text-[#0F2237] border-b border-[#DDE5F0]">
+            <thead className="bg-slate-100/80 text-left text-xs uppercase tracking-wide text-slate-700 border-b border-slate-200">
               <tr>
                 <th className="px-5 py-3.5 font-bold whitespace-nowrap">Case & Contact</th>
                 <th className="px-5 py-3.5 font-bold whitespace-nowrap">Destination & course</th>
@@ -288,36 +288,36 @@ function Leads() {
                     className="group cursor-pointer transition-colors bg-white hover:bg-[#DBEAFE]/80"
                   >
                     <td className="px-5 py-4 align-middle">
-                      <p className="font-bold text-[#0F2237] group-hover:text-[#F26500] transition-colors whitespace-nowrap">
+                      <p className="font-bold text-foreground group-hover:text-slate-900 transition-colors whitespace-nowrap">
                         {c.student}
                       </p>
-                      <p className="text-xs text-[#64748B] group-hover:text-[#F26500] transition-colors whitespace-nowrap mt-0.5">
+                      <p className="text-xs text-muted-foreground transition-colors whitespace-nowrap mt-0.5">
                         {c.id} · {c.phone}
                       </p>
-                      <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-700 px-2 py-0.5 text-[11px] font-semibold mt-1 whitespace-nowrap">
-                        <Share2 className="size-3 text-blue-600" />
+                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-300 text-slate-800 px-2 py-0.5 text-[11px] font-semibold mt-1 whitespace-nowrap">
+                        <Share2 className="size-3 text-slate-600" />
                         <span>{c.source || "Customer reference"}</span>
-                        {c.sourceName && <span className="font-normal text-blue-900/80">({c.sourceName})</span>}
+                        {c.sourceName && <span className="font-normal text-slate-600">({c.sourceName})</span>}
                       </span>
                     </td>
 
                     <td className="px-5 py-4 align-middle">
-                      <p className="font-semibold text-[#0F2237] group-hover:text-[#F26500] transition-colors whitespace-nowrap">{c.course}</p>
-                      <p className="text-xs text-[#64748B] group-hover:text-[#F26500] transition-colors whitespace-nowrap mt-0.5">
+                      <p className="font-semibold text-foreground whitespace-nowrap">{c.course}</p>
+                      <p className="text-xs text-muted-foreground whitespace-nowrap mt-0.5">
                         {c.country} · {c.university}
                       </p>
                     </td>
 
                     <td className="px-5 py-4 align-middle whitespace-nowrap">
-                      <p className="stat-figure text-[#0F2237] font-bold group-hover:text-[#F26500] transition-colors">{formatLakh(c.amount)}</p>
-                      <p className="text-xs text-[#64748B] group-hover:text-[#F26500] transition-colors mt-0.5">{c.loanType}</p>
+                      <p className="stat-figure text-foreground font-bold">{formatLakh(c.amount)}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{c.loanType}</p>
                     </td>
 
                     {/* Assigned Lender Partner */}
                     <td className="px-5 py-4 align-middle">
                       {c.lender && c.lender !== "Not assigned" ? (
                         <div className="space-y-1">
-                          <span className="font-bold text-xs text-[#0F2237] block whitespace-nowrap group-hover:text-[#F26500] transition-colors">
+                          <span className="font-bold text-xs text-foreground block whitespace-nowrap">
                             {c.lender}
                           </span>
                           {c.stage === "Rejected" ? (
@@ -341,14 +341,14 @@ function Leads() {
 
                     <td className="px-5 py-4 align-middle whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold border ${
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold border ${
                           c.interestStatus === "Interested"
-                            ? "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
+                            ? "bg-slate-900 text-white border-slate-900"
                             : c.interestStatus === "Follow-up Required"
-                            ? "bg-amber-500/15 text-amber-700 border-amber-500/30"
+                            ? "bg-slate-200 text-slate-900 border-slate-400"
                             : c.interestStatus === "Not Interested"
-                            ? "bg-rose-500/15 text-rose-700 border-rose-500/30"
-                            : "bg-slate-500/15 text-slate-700 border-slate-500/30"
+                            ? "bg-slate-100 text-slate-500 border-slate-300 line-through"
+                            : "bg-slate-100 text-slate-700 border-slate-300"
                         }`}
                       >
                         {c.interestStatus || "Not Contacted"}
@@ -359,11 +359,11 @@ function Leads() {
                       {nextFollowUp ? (
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 font-bold text-foreground">
-                            <Clock className="size-3.5 text-primary shrink-0" />
+                            <Clock className="size-3.5 text-slate-700 shrink-0" />
                             <span>{formatDateTime(nextFollowUp.scheduledAt)}</span>
                           </div>
                           {nextFollowUp.effective === "Overdue" && (
-                            <span className="inline-flex items-center text-[10px] font-extrabold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                            <span className="inline-flex items-center text-[10px] font-extrabold text-slate-900 bg-slate-200 px-1.5 py-0.5 rounded border border-slate-400">
                               OVERDUE
                             </span>
                           )}
@@ -377,13 +377,13 @@ function Leads() {
                       <div className="space-y-1.5 min-w-[110px]">
                         <div className="flex items-center justify-between text-[11px] font-bold">
                           <span>{docP.received}/{docP.total} Docs</span>
-                          <span className={docP.isComplete ? "text-emerald-600 font-extrabold" : "text-primary"}>
+                          <span className={docP.isComplete ? "text-slate-950 font-extrabold" : "text-slate-700"}>
                             {docP.percentage}%
                           </span>
                         </div>
-                        <div className="w-full h-2 rounded-full bg-muted overflow-hidden border border-border/40">
+                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
                           <div
-                            className={`h-full transition-all ${docP.isComplete ? "bg-emerald-600" : "bg-primary"}`}
+                            className={`h-full transition-all ${docP.isComplete ? "bg-slate-900" : "bg-slate-700"}`}
                             style={{ width: `${docP.percentage}%` }}
                           />
                         </div>
@@ -393,9 +393,17 @@ function Leads() {
                     <td className="px-5 py-4 align-middle whitespace-nowrap">
                       <div className="space-y-1">
                         <StageBadge stage={c.stage} />
-                        {isHanded && (
-                          <span className="inline-block text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            ✓ Handed Over
+                        {isHanded ? (
+                          <span className="inline-block text-[10px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                            ✓ Handed Over to RM
+                          </span>
+                        ) : c.stage === "Returned for Corrections" ? (
+                          <span className="inline-block text-[10px] font-bold text-slate-800 bg-slate-200 px-2 py-0.5 rounded border border-slate-400">
+                            ⚠ Returned to Sales
+                          </span>
+                        ) : (
+                          <span className="inline-block text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                            With Sales
                           </span>
                         )}
                       </div>

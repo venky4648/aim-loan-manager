@@ -77,69 +77,69 @@ export function UnifiedActivityTimeline({
     switch (type) {
       case "first_contact":
         return {
-          icon: <PhoneCall className="size-3.5 text-blue-600" />,
-          badge: "bg-blue-500/15 text-blue-700 border-blue-500/30",
+          icon: <PhoneCall className="size-3.5 text-slate-700" />,
+          badge: "bg-slate-100 text-slate-800 border-slate-300",
           label: "First Contact",
         };
       case "interest_change":
         return {
-          icon: <CheckCircle2 className="size-3.5 text-emerald-600" />,
-          badge: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
+          icon: <CheckCircle2 className="size-3.5 text-slate-700" />,
+          badge: "bg-slate-100 text-slate-800 border-slate-300",
           label: "Interest Qualified",
         };
       case "not_interested":
         return {
-          icon: <AlertCircle className="size-3.5 text-rose-600" />,
-          badge: "bg-rose-500/15 text-rose-700 border-rose-500/30",
+          icon: <AlertCircle className="size-3.5 text-slate-700" />,
+          badge: "bg-slate-200 text-slate-800 border-slate-300",
           label: "Not Interested",
         };
       case "reactivation":
         return {
-          icon: <RotateCcw className="size-3.5 text-emerald-600" />,
-          badge: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
+          icon: <RotateCcw className="size-3.5 text-slate-700" />,
+          badge: "bg-slate-100 text-slate-800 border-slate-300",
           label: "Reactivated Lead",
         };
       case "followup_created":
       case "followup_rescheduled":
         return {
-          icon: <Clock className="size-3.5 text-amber-600" />,
-          badge: "bg-amber-500/15 text-amber-700 border-amber-500/30",
+          icon: <Clock className="size-3.5 text-slate-700" />,
+          badge: "bg-slate-100 text-slate-800 border-slate-300",
           label: "Follow-up Call",
         };
       case "followup_completed":
         return {
-          icon: <CheckCircle2 className="size-3.5 text-emerald-600" />,
-          badge: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
+          icon: <CheckCircle2 className="size-3.5 text-slate-700" />,
+          badge: "bg-slate-900 text-white border-slate-900",
           label: "Call Completed",
         };
       case "document_update":
         return {
-          icon: <FileText className="size-3.5 text-indigo-600" />,
-          badge: "bg-indigo-500/15 text-indigo-700 border-indigo-500/30",
+          icon: <FileText className="size-3.5 text-slate-700" />,
+          badge: "bg-slate-100 text-slate-800 border-slate-300",
           label: "Document Change",
         };
       case "ready_for_processing":
         return {
-          icon: <CheckCircle2 className="size-3.5 text-emerald-600" />,
-          badge: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
+          icon: <CheckCircle2 className="size-3.5 text-slate-700" />,
+          badge: "bg-slate-100 text-slate-800 border-slate-300",
           label: "Ready for Handover",
         };
       case "handover":
         return {
-          icon: <Send className="size-3.5 text-primary" />,
-          badge: "bg-primary/15 text-primary border-primary/30",
+          icon: <Send className="size-3.5 text-slate-700" />,
+          badge: "bg-slate-900 text-white border-slate-900",
           label: "Handed Over",
         };
       case "comment":
         return {
-          icon: <MessageSquare className="size-3.5 text-primary" />,
-          badge: "bg-primary/15 text-primary border-primary/30",
+          icon: <MessageSquare className="size-3.5 text-slate-700" />,
+          badge: "bg-slate-100 text-slate-800 border-slate-300",
           label: "Staff Remark",
         };
       default:
         return {
-          icon: <History className="size-3.5 text-muted-foreground" />,
-          badge: "bg-muted text-muted-foreground border-border",
+          icon: <History className="size-3.5 text-slate-500" />,
+          badge: "bg-slate-100 text-slate-700 border-slate-300",
           label: "System Event",
         };
     }

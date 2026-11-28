@@ -35,9 +35,11 @@ export function ReadyForProcessingSection({
   record,
 }: ReadyForProcessingSectionProps) {
   const { user, role } = useAuth();
-  const { submitToLender, rerouteToNewLender, handoverToProcessing } = useCases();
+  const { submitToLender, rerouteToNewLender, handoverToProcessing, returnLeadToSales, updateInterestStatus } = useCases();
 
-  const isSalesOrAdmin = role === "telecom" || role === "superadmin";
+  const isSales = role === "telecom";
+  const isRmOrAdmin = role === "relationship_manager" || role === "superadmin";
+  const isHandedOver = Boolean(record.handover?.isHandedOver);
   const isInterested = record.interestStatus === "Interested";
   const isEligible = isInterested;
 
@@ -57,7 +59,33 @@ export function ReadyForProcessingSection({
       avgTat: "8 days",
     };
 
-  // Submission Dialog State
+  // Handover to Processing Dialog State (for Sales)
+  const [handoverModalOpen, setHandoverModalOpen] = useState(false);
+  const [handoverRemarks, setHandoverRemarks] = useState("");
+  const [processingOwner, setProcessingOwner] = useState(
+    record.handover?.processingOwner || "Nikhil V (Lead Processing)"
+  );
+
+  const handleConfirmHandover = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (record.interestStatus !== "Interested") {
+      updateInterestStatus(record.id, {
+        interestStatus: "Interested",
+        authorName: user?.name || "Sales Team",
+      });
+    }
+    handoverToProcessing(record.id, {
+      handoverRemarks:
+        handoverRemarks.trim() ||
+        "Documents collected and applicant verified. Handing over to Processing Team for bank underwriting.",
+      processingOwner: processingOwner || "Nikhil V (Lead Processing)",
+      authorName: user?.name || "Sales Team",
+    });
+    setHandoverModalOpen(false);
+    setHandoverRemarks("");
+  };
+
+  // Submission Dialog State (RM & Admin only)
   const [submitModalOpen, setSubmitModalOpen] = useState(false);
   const [targetLender, setTargetLender] = useState(currentLender || "Avanse Financial Services");
   const [submitAppNo, setSubmitAppNo] = useState("");
@@ -70,6 +98,24 @@ export function ReadyForProcessingSection({
   );
   const [rerouteAppNo, setRerouteAppNo] = useState("");
   const [rerouteReason, setRerouteReason] = useState("");
+
+  // Return to Sales Dialog State (Corrections Needed)
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+
+  const handleConfirmReturn = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!returnReason.trim()) {
+      toast.error("Please provide the correction reason / feedback for Sales.");
+      return;
+    }
+    returnLeadToSales(record.id, {
+      reason: returnReason.trim(),
+      authorName: user?.name || "Relationship Manager",
+    });
+    setReturnModalOpen(false);
+    setReturnReason("");
+  };
 
   const handleOpenSubmit = () => {
     if (!isEligible) {
@@ -145,58 +191,104 @@ export function ReadyForProcessingSection({
           <div className="flex items-center gap-2">
             <Send className="size-5 text-primary" />
             <h2 className="text-base font-bold text-foreground">
-              Step 4: Document Verification & Lender Submission
+              Step 4: Document Verification & Processing Handover (RM)
             </h2>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Validate collected documentation and submit the application directly to the assigned lender.
+            Validate collected documentation and handover the case to Relationship Manager / Processing Team for bank desk submission.
           </p>
         </div>
 
-        {/* Status Pill */}
-        {isLocked ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-3 py-1 text-xs font-bold text-blue-700 border border-blue-500/30">
-            <Lock className="size-3.5 text-blue-600" /> File Locked ({currentLender})
-          </span>
-        ) : isSanctioned ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-500/30">
-            <CheckCircle2 className="size-3.5 text-emerald-600" /> Sanction Letter Issued
-          </span>
-        ) : isRejected ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-bold text-rose-700 border border-rose-500/30">
-            <Unlock className="size-3.5 text-rose-600" /> File Unlocked (Declined)
-          </span>
-        ) : !isInterested ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-500/15 px-3 py-1 text-xs font-bold text-slate-700 border border-slate-500/30">
-            <Lock className="size-3.5" /> Step Locked
-          </span>
-        ) : isEligible ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-500/30">
-            <CheckCircle2 className="size-3.5" /> Ready for Lender Submission
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-bold text-rose-700 border border-rose-500/30">
-            <AlertCircle className="size-3.5" /> Submission Blocked
-          </span>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Return to Sales Action Button for RM & Admin */}
+          {isRmOrAdmin && record.stage !== "Returned for Corrections" && !isSanctioned && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setReturnModalOpen(true)}
+              className="border-amber-500/50 text-amber-800 hover:bg-amber-500/10 font-bold text-xs h-8 gap-1.5 shrink-0"
+              title="Return application back to Sales team for correction or missing proofs"
+            >
+              <RotateCcw className="size-3.5 text-amber-600" /> Return to Sales
+            </Button>
+          )}
+
+          {/* Status Pill */}
+          {record.stage === "Returned for Corrections" ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-500/30">
+              <AlertCircle className="size-3.5 text-amber-600" /> Returned for Corrections
+            </span>
+          ) : isLocked ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-3 py-1 text-xs font-bold text-blue-700 border border-blue-500/30">
+              <Lock className="size-3.5 text-blue-600" /> File Locked ({currentLender})
+            </span>
+          ) : isSanctioned ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-500/30">
+              <CheckCircle2 className="size-3.5 text-emerald-600" /> Sanction Letter Issued
+            </span>
+          ) : isRejected ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-bold text-rose-700 border border-rose-500/30">
+              <Unlock className="size-3.5 text-rose-600" /> File Unlocked (Declined)
+            </span>
+          ) : isHandedOver ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-3 py-1 text-xs font-bold text-blue-700 border border-blue-500/30">
+              <Clock className="size-3.5 text-blue-600" /> Handed Over to RM
+            </span>
+          ) : !isInterested ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-500/15 px-3 py-1 text-xs font-bold text-slate-700 border border-slate-500/30">
+              <Lock className="size-3.5" /> Step Locked
+            </span>
+          ) : isEligible ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-500/30">
+              <CheckCircle2 className="size-3.5" /> Ready for Processing
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-bold text-rose-700 border border-rose-500/30">
+              <AlertCircle className="size-3.5" /> Submission Blocked
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* STATE 0: Locked if student is not interested yet */}
+      {/* STATE 0: When student interest is not yet confirmed */}
       {!isInterested && (
-        <div className="p-6 rounded-xl border-2 border-dashed border-border bg-muted/20 text-center space-y-3">
-          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <Lock className="size-6 text-muted-foreground" />
+        <div className="p-6 rounded-xl border-2 border-dashed border-amber-500/40 bg-amber-500/5 text-center space-y-3.5">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+            <Send className="size-6 text-amber-700" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-foreground">
-              Lender Submission is Currently Locked
+              Handover File to Relationship Manager (Processing)
             </h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-              This case cannot be submitted to a lender until the student confirms interest in Step 1.
+              Confirm applicant interest and send this application to the Relationship Manager for document verification and bank desk submission.
             </p>
           </div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-card border border-border text-xs font-semibold text-muted-foreground">
-            Current Stage: <span className="text-primary font-bold">{record.stage}</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                updateInterestStatus(record.id, {
+                  interestStatus: "Interested",
+                  authorName: user?.name || "Sales Team",
+                });
+                toast.success("Student marked as Interested! You can now handover to RM.");
+              }}
+              className="text-xs font-semibold h-8 border-amber-500/50 text-amber-800 hover:bg-amber-100"
+            >
+              <CheckCircle2 className="mr-1.5 size-3.5 text-emerald-600" /> 1. Mark Interested
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setHandoverModalOpen(true)}
+              className="text-xs font-bold h-8 bg-primary hover:bg-primary/90 text-white gap-1.5 shadow-sm"
+            >
+              <Send className="size-3.5" /> Handover File to RM Now
+            </Button>
           </div>
         </div>
       )}
@@ -266,20 +358,20 @@ export function ReadyForProcessingSection({
 
       {/* STATE 3: Application Declined / Rejected */}
       {isRejected && (
-        <div className="p-4 rounded-xl border-2 border-rose-500/40 bg-rose-500/10 space-y-3">
+        <div className="p-4 rounded-xl border border-slate-300 bg-slate-50 space-y-3">
           <div className="flex items-start gap-3">
-            <AlertCircle className="size-5 text-rose-600 shrink-0 mt-0.5" />
+            <AlertCircle className="size-5 text-slate-700 shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <h4 className="text-xs font-bold text-rose-950">
+              <h4 className="text-xs font-bold text-slate-900">
                 Application Declined by {currentLender}
               </h4>
-              <p className="text-xs text-rose-800 mt-1 bg-card/70 p-2.5 rounded border border-rose-200 leading-relaxed">
+              <p className="text-xs text-slate-700 mt-1 bg-white p-2.5 rounded border border-slate-200 leading-relaxed">
                 <strong>Decline Reason:</strong> {record.lenderRejectionReason || "Credit criteria not met."}
               </p>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-lg bg-card border border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-3.5 rounded-lg bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold text-foreground">
                 The file lock has been released.
@@ -291,7 +383,7 @@ export function ReadyForProcessingSection({
             <Button
               size="sm"
               onClick={handleOpenReroute}
-              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shrink-0 shadow-sm gap-1.5"
+              className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shrink-0 shadow-sm gap-1.5"
             >
               <RotateCcw className="size-3.5" /> Select New Lender & Re-route
             </Button>
@@ -301,23 +393,31 @@ export function ReadyForProcessingSection({
 
       {/* STATE 4: Interested & Ready to Send to Lender */}
       {isInterested && isEligible && !isLocked && !isRejected && (
-        <div className="p-5 rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 space-y-4">
+        <div className="p-5 rounded-xl border border-slate-300 bg-slate-50 space-y-4">
           <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
               <FileCheck className="size-6" />
             </span>
             <div>
-              <h3 className="text-sm font-bold text-emerald-950">
-                Application Ready for Lender Review
+              <h3 className="text-sm font-bold text-slate-900">
+                {isRmOrAdmin
+                  ? "Application Ready for Lender Review & Submission"
+                  : isHandedOver && record.stage !== "Returned for Corrections"
+                  ? "Application Handed Over to Processing Team"
+                  : "Application Ready for Processing Team Handover"}
               </h3>
-              <p className="text-xs text-emerald-900 mt-0.5">
-                The student has confirmed interest. The application can be sent to the selected lender without requiring 100% document collection.
+              <p className="text-xs text-slate-700 mt-0.5">
+                {isRmOrAdmin
+                  ? "The student has confirmed interest. As Relationship Manager, you can verify documents and submit directly to partner bank credit desks."
+                  : isHandedOver && record.stage !== "Returned for Corrections"
+                  ? `File successfully handed over to ${record.handover?.processingOwner || "Processing Team"}. The Relationship Manager will review and submit to the bank.`
+                  : "The student has confirmed interest. Handover this file to the Processing Team (RM) for document verification and bank desk submission."}
               </p>
             </div>
           </div>
 
           {/* Smart Allocation Panel */}
-          <div className="p-4 rounded-xl bg-card border border-emerald-500/30 shadow-xs space-y-3">
+          <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
             {hasAssignedLender ? (
               /* PATH A: Lender is Already Assigned */
               <div className="space-y-3">
@@ -325,7 +425,7 @@ export function ReadyForProcessingSection({
                   <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
                     Assigned Partner Bank / NBFC
                   </span>
-                  <span className="text-[10px] uppercase font-extrabold bg-primary/10 text-primary border border-primary/25 px-2 py-0.5 rounded">
+                  <span className="text-[10px] uppercase font-bold bg-slate-100 text-slate-800 border border-slate-300 px-2 py-0.5 rounded">
                     {partnerMeta.type || "NBFC"} Partner · {partnerMeta.sanctionRate}% Sanction Rate
                   </span>
                 </div>
@@ -336,29 +436,47 @@ export function ReadyForProcessingSection({
                       {currentLender}
                     </h4>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Ready to send file directly to <strong>{currentLender}</strong>'s credit desk.
+                      {isRmOrAdmin
+                        ? `Ready to send file directly to ${currentLender}'s credit desk.`
+                        : `Target lender for processing: ${currentLender}. (Managed by RM)`}
                     </p>
                   </div>
 
-                  {isSalesOrAdmin && (
+                  {/* Actions based on role */}
+                  {isRmOrAdmin ? (
                     <Button
                       onClick={handleOpenSubmit}
                       size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-md shadow-emerald-600/20 gap-2"
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-sm gap-2"
                     >
                       <Send className="size-3.5" /> Send Directly to {currentLender}
                     </Button>
-                  )}
+                  ) : isSales ? (
+                    !isHandedOver || record.stage === "Returned for Corrections" ? (
+                      <Button
+                        onClick={() => setHandoverModalOpen(true)}
+                        size="sm"
+                        className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-sm gap-2"
+                      >
+                        <Send className="size-3.5" /> Handover File to Processing (RM)
+                      </Button>
+                    ) : (
+                      <div className="text-xs font-semibold text-slate-800 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                        <CheckCircle2 className="size-4 text-slate-700 shrink-0" />
+                        <span>Handed Over to {record.handover?.processingOwner || "Processing Team"}</span>
+                      </div>
+                    )
+                  ) : null}
                 </div>
               </div>
             ) : (
               /* PATH B: No Lender Assigned Yet */
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-600">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-600">
                     Lender Not Assigned Yet
                   </span>
-                  <span className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300 px-2 py-0.5 rounded">
                     Partner Selection Required
                   </span>
                 </div>
@@ -369,19 +487,37 @@ export function ReadyForProcessingSection({
                       Choose a Lending Partner
                     </h4>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Select a preferred bank/NBFC (Avanse, Auxilo, Credila, InCred, Tata Capital) to submit.
+                      {isRmOrAdmin
+                        ? "Select a preferred bank/NBFC (Avanse, Auxilo, Credila, InCred, Tata Capital) to submit."
+                        : "Lender partner selection and bank submission is handled by the Processing Team (RM)."}
                     </p>
                   </div>
 
-                  {isSalesOrAdmin && (
+                  {/* Actions based on role */}
+                  {isRmOrAdmin ? (
                     <Button
                       onClick={handleOpenSubmit}
                       size="sm"
-                      className="bg-primary hover:bg-primary/90 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-md gap-2"
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-sm gap-2"
                     >
                       <Building2 className="size-3.5" /> Select Lender & Submit File
                     </Button>
-                  )}
+                  ) : isSales ? (
+                    !isHandedOver || record.stage === "Returned for Corrections" ? (
+                      <Button
+                        onClick={() => setHandoverModalOpen(true)}
+                        size="sm"
+                        className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-sm gap-2"
+                      >
+                        <Send className="size-3.5" /> Handover File to Processing (RM)
+                      </Button>
+                    ) : (
+                      <div className="text-xs font-semibold text-slate-800 bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                        <CheckCircle2 className="size-4 text-slate-700 shrink-0" />
+                        <span>Handed Over to {record.handover?.processingOwner || "Processing Team"}</span>
+                      </div>
+                    )
+                  ) : null}
                 </div>
               </div>
             )}
@@ -633,6 +769,116 @@ export function ReadyForProcessingSection({
                 className="font-bold bg-primary hover:bg-primary/90 text-white"
               >
                 <Lock className="mr-1.5 size-3.5" /> Re-assign & Submit File
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 3: RETURN FILE TO SALES TEAM */}
+      <Dialog open={returnModalOpen} onOpenChange={setReturnModalOpen}>
+        <DialogContent className="max-w-md border-border bg-card shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <RotateCcw className="size-5 text-amber-600" /> Return File to Sales Team
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Please state clearly what documents or information need correction so the sales team can contact the student and fix them.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleConfirmReturn} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="returnReason" className="text-xs font-bold text-foreground">
+                Correction Feedback / Remarks *
+              </Label>
+              <Textarea
+                id="returnReason"
+                required
+                rows={4}
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                placeholder="e.g. Bank statement is missing page 4; Co-applicant salary slips needed for past 3 months..."
+                className="text-xs"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setReturnModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="font-bold bg-slate-900 hover:bg-slate-800 text-white"
+              >
+                <RotateCcw className="mr-1.5 size-3.5" /> Confirm Return to Sales
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL 4: HANDOVER FILE TO PROCESSING (RM) */}
+      <Dialog open={handoverModalOpen} onOpenChange={setHandoverModalOpen}>
+        <DialogContent className="max-w-md border-border bg-card shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <Send className="size-5 text-primary" /> Handover File to Processing Team (RM)
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Transfer this application from Sales to the Relationship Manager / Processing Team for document verification and bank desk submission.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleConfirmHandover} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="processingOwner" className="text-xs font-bold text-foreground">
+                Assign to Processing Officer / RM
+              </Label>
+              <Input
+                id="processingOwner"
+                value={processingOwner}
+                onChange={(e) => setProcessingOwner(e.target.value)}
+                placeholder="e.g. Nikhil V (Lead Processing)"
+                className="text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="handoverRemarks" className="text-xs font-bold text-foreground">
+                Handover Notes / Instructions for RM
+              </Label>
+              <Textarea
+                id="handoverRemarks"
+                rows={3}
+                value={handoverRemarks}
+                onChange={(e) => setHandoverRemarks(e.target.value)}
+                placeholder="e.g. All KYC and academic docs collected; student prefers Avanse or Auxilo; urgent I-20 deadline next week..."
+                className="text-xs"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setHandoverModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="font-bold bg-primary hover:bg-primary/90 text-white gap-1.5"
+              >
+                <Send className="size-3.5" /> Confirm Handover to Processing
               </Button>
             </div>
           </form>

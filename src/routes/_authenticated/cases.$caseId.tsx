@@ -6,7 +6,8 @@ import { formatINR, formatLakh, REFERRAL_SOURCES } from "@/lib/demo-data";
 import { useAuth } from "@/lib/auth-context";
 import { useCases } from "@/lib/cases-context";
 import { toast } from "sonner";
-import { Check, Edit3, ShieldAlert, Send, FileText, CheckCircle2, Share2, Download } from "lucide-react";
+import { Check, Edit3, ShieldAlert, Send, FileText, CheckCircle2, Share2, Download, AlertTriangle, Building2 } from "lucide-react";
+import { AddLenderApplicationModal } from "@/components/crm/processing/AddLenderApplicationModal";
 import { exportCaseDetailToExcel } from "@/lib/export-utils";
 import { SalesWorkflowHeader } from "@/components/crm/sales/SalesWorkflowHeader";
 import { FirstContactSection } from "@/components/crm/sales/FirstContactSection";
@@ -175,6 +176,7 @@ function CaseDetail() {
   const [propertyDocuments, setPropertyDocuments] = useState<UploadedDocumentEntry[]>(
     (record.propertyDocuments || []) as UploadedDocumentEntry[],
   );
+  const [isLenderModalOpen, setIsLenderModalOpen] = useState(false);
   type EditingSection = "student" | "academics" | "coApplicant" | "guarantor" | "collateral";
   const [editingSection, setEditingSection] = useState<EditingSection | null>(null);
   const [editDraft, setEditDraft] = useState<Record<string, string>>({});
@@ -382,13 +384,24 @@ function CaseDetail() {
           <Button
             size="sm"
             variant="outline"
-            className="border-2 border-border bg-card hover:bg-muted font-semibold text-xs gap-1.5 shadow-xs"
+            className="border border-border bg-card hover:bg-muted font-semibold text-xs gap-1.5 shadow-xs"
             onClick={() => exportCaseDetailToExcel(record)}
             title="Export complete student case file to Excel"
           >
-            <Download className="size-3.5 text-emerald-600" />
+            <Download className="size-3.5 text-slate-700" />
             <span className="hidden sm:inline">Export Case (.csv)</span>
           </Button>
+
+          {(role === "relationship_manager" || role === "superadmin" || role === "manager") && (
+            <Button
+              size="sm"
+              onClick={() => setIsLenderModalOpen(true)}
+              className="font-semibold text-xs gap-1.5 shadow-xs"
+            >
+              <Building2 className="size-3.5" />
+              <span>Apply to Lenders</span>
+            </Button>
+          )}
 
           <StageBadge stage={record.stage} />
           {canEditCase ? (
@@ -400,12 +413,12 @@ function CaseDetail() {
               <Edit3 className="mr-1.5 size-3.5" /> Update stage
             </Button>
           ) : isHandedOver ? (
-            <span className="text-xs font-semibold text-emerald-700 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-md flex items-center gap-1">
-              <CheckCircle2 className="size-3" /> Handed Over
+            <span className="text-xs font-semibold text-slate-900 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-md flex items-center gap-1">
+              <CheckCircle2 className="size-3 text-slate-700" /> Handed Over
             </span>
           ) : (
-            <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1 bg-muted px-2.5 py-1 rounded-md">
-              <ShieldAlert className="size-3 text-amber-500" /> Sales Active
+            <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
+              <ShieldAlert className="size-3 text-slate-500" /> Sales Active
             </span>
           )}
         </div>
@@ -414,6 +427,24 @@ function CaseDetail() {
       <div className="space-y-6">
         {/* Sales Workflow Header Stepper */}
         <SalesWorkflowHeader record={record} />
+
+        {/* Returned for Corrections Banner */}
+        {record.stage === "Returned for Corrections" && (
+          <div className="p-4 sm:p-5 rounded-xl border border-slate-300 bg-slate-100/90 shadow-xs flex items-start gap-3.5">
+            <AlertTriangle className="size-5 text-slate-700 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-slate-900">
+                Application File Returned to Sales Team (Corrections Needed)
+              </h3>
+              <p className="text-xs text-slate-700 leading-relaxed">
+                <strong>RM Feedback / Remarks:</strong> {record.returnToSales?.returnReason || "Please verify applicant documents and co-applicant financials with student."}
+              </p>
+              <p className="text-[11px] text-slate-600">
+                Returned by <strong>{record.returnToSales?.returnedBy || "Relationship Manager"}</strong> {record.returnToSales?.returnedAt ? `on ${new Date(record.returnToSales.returnedAt).toLocaleString("en-IN")}` : ""}. Please correct the required details and re-handover the file.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Top KPI Cards */}
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -573,11 +604,11 @@ function CaseDetail() {
                     </div>
                   ) : (
                     <div className="mt-1 flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-700 px-2.5 py-0.5 text-xs font-semibold">
-                        <Share2 className="size-3 text-blue-600" />
+                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-300 text-slate-800 px-2.5 py-0.5 text-xs font-semibold">
+                        <Share2 className="size-3 text-slate-600" />
                         <span>{record.source || "Customer reference"}</span>
                         {record.sourceName && (
-                          <span className="font-normal text-blue-900/80">({record.sourceName})</span>
+                          <span className="font-normal text-slate-600">({record.sourceName})</span>
                         )}
                       </span>
                       <button
@@ -853,12 +884,12 @@ function CaseDetail() {
                       <span className="font-medium text-foreground">{d.name}</span>
                       <div className="flex items-center gap-2">
                         <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold border ${
                             d.status === "Verified"
-                              ? "bg-emerald-500/15 text-emerald-700"
+                              ? "bg-slate-900 text-white border-slate-900"
                               : d.status === "Received"
-                              ? "bg-blue-500/15 text-blue-700"
-                              : "bg-amber-500/15 text-amber-700"
+                              ? "bg-slate-200 text-slate-900 border-slate-400"
+                              : "bg-slate-100 text-slate-700 border-slate-300"
                           }`}
                         >
                           {d.status}
@@ -867,7 +898,7 @@ function CaseDetail() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 text-xs font-semibold text-emerald-600 hover:bg-emerald-50"
+                            className="h-7 text-xs font-semibold text-slate-700 hover:bg-slate-100"
                             onClick={() => toast.success(`Marked ${d.name} as Verified`)}
                           >
                             <Check className="mr-1 size-3" /> Mark Verified
@@ -886,6 +917,16 @@ function CaseDetail() {
             <LenderManagementCard record={record} />
           </div>
         </div>
+
+        {/* Modal to apply to multiple lenders directly from this student file */}
+        <AddLenderApplicationModal
+          isOpen={isLenderModalOpen}
+          onClose={() => setIsLenderModalOpen(false)}
+          caseItem={record}
+          onSuccess={() => {
+            toast.success("Lender applications initiated successfully!");
+          }}
+        />
       </div>
     </AppShell>
   );

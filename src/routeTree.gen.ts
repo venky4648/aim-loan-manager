@@ -19,6 +19,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDisbursementsRouteImport } from './routes/_authenticated/disbursements'
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
 import { Route as AuthenticatedLendersRouteImport } from './routes/_authenticated/lenders'
+import { Route as AuthenticatedLoanProcessingRouteImport } from './routes/_authenticated/loan-processing'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedCasesCaseIdRouteImport } from './routes/_authenticated/cases.$caseId'
 
@@ -72,6 +73,12 @@ const AuthenticatedLendersRoute = AuthenticatedLendersRouteImport.update({
   path: '/lenders',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedLoanProcessingRoute =
+  AuthenticatedLoanProcessingRouteImport.update({
+    id: '/loan-processing',
+    path: '/loan-processing',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -94,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/disbursements': typeof AuthenticatedDisbursementsRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/lenders': typeof AuthenticatedLendersRoute
+  '/loan-processing': typeof AuthenticatedLoanProcessingRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
 }
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/disbursements': typeof AuthenticatedDisbursementsRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/lenders': typeof AuthenticatedLendersRoute
+  '/loan-processing': typeof AuthenticatedLoanProcessingRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
 }
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/_authenticated/disbursements': typeof AuthenticatedDisbursementsRoute
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
   '/_authenticated/lenders': typeof AuthenticatedLendersRoute
+  '/_authenticated/loan-processing': typeof AuthenticatedLoanProcessingRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/cases/$caseId': typeof AuthenticatedCasesCaseIdRoute
 }
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/disbursements'
     | '/leads'
     | '/lenders'
+    | '/loan-processing'
     | '/reports'
     | '/cases/$caseId'
   fileRoutesByTo: FileRoutesByTo
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/disbursements'
     | '/leads'
     | '/lenders'
+    | '/loan-processing'
     | '/reports'
     | '/cases/$caseId'
   id:
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/_authenticated/disbursements'
     | '/_authenticated/leads'
     | '/_authenticated/lenders'
+    | '/_authenticated/loan-processing'
     | '/_authenticated/reports'
     | '/_authenticated/cases/$caseId'
   fileRoutesById: FileRoutesById
@@ -249,6 +262,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLendersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/loan-processing': {
+      id: '/_authenticated/loan-processing'
+      path: '/loan-processing'
+      fullPath: '/loan-processing'
+      preLoaderRoute: typeof AuthenticatedLoanProcessingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/reports': {
       id: '/_authenticated/reports'
       path: '/reports'
@@ -271,6 +291,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDisbursementsRoute: typeof AuthenticatedDisbursementsRoute
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
   AuthenticatedLendersRoute: typeof AuthenticatedLendersRoute
+  AuthenticatedLoanProcessingRoute: typeof AuthenticatedLoanProcessingRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedCasesCaseIdRoute: typeof AuthenticatedCasesCaseIdRoute
 }
@@ -280,6 +301,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDisbursementsRoute: AuthenticatedDisbursementsRoute,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
   AuthenticatedLendersRoute: AuthenticatedLendersRoute,
+  AuthenticatedLoanProcessingRoute: AuthenticatedLoanProcessingRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedCasesCaseIdRoute: AuthenticatedCasesCaseIdRoute,
 }

@@ -4,6 +4,28 @@ export const API_BASE_URL =
     ? "https://loancrm-backend.llp.trizenventures.com/api/v1"
     : "http://localhost:5000/api/v1");
 
+export function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("crm_token");
+}
+
+export function authHeaders(): Record<string, string> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export function handleAuthStatus(res: Response): void {
+  if (res.status === 401 && typeof window !== "undefined") {
+    // If token expired or invalid, can optionally trigger session clear
+  }
+}
+
 export interface RegisterPayload {
   name: string;
   email: string;
@@ -712,6 +734,73 @@ export async function handoverLeadApi(
   }
 }
 
+export async function returnLeadToSalesApi(
+  caseId: string,
+  payload: {
+    reason?: string;
+    returnReason?: string;
+    requiredCorrections?: string;
+    authorName?: string;
+    returnedBy?: string;
+  }
+): Promise<{ success: boolean; returnToSales?: any; lead?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/leads/${encodeURIComponent(caseId)}/return-to-sales`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data.error || "Failed to return lead to sales on backend.",
+      };
+    }
+
+    return data;
+  } catch (err) {
+    return {
+      success: false,
+      error: "Unable to connect to backend server.",
+    };
+  }
+}
+
+export async function publicRegisterStudentApi(payload: any): Promise<{
+  success: boolean;
+  lead?: any;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/leads/public-register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data.error || "Registration failed.",
+      };
+    }
+
+    return data;
+  } catch (err) {
+    return {
+      success: false,
+      error: "Unable to connect to backend server.",
+    };
+  }
+}
+
 export async function updateLeadLenderApi(
   caseId: string,
   payload: {
@@ -885,5 +974,458 @@ export async function addCommentApi(
       success: false,
       error: "Unable to connect to backend server.",
     };
+  }
+}
+
+// -------------------------------------------------------------
+// LOAN PROCESSING & MULTI-LENDER SUBMISSION APIS
+// -------------------------------------------------------------
+
+export async function fetchLoanApplicationsApi(params?: {
+  status?: string;
+  leadId?: string;
+  lender?: string;
+  relationshipManager?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  success: boolean;
+  applications?: any[];
+  summary?: any;
+  pagination?: any;
+  error?: string;
+}> {
+  try {
+    const query = new URLSearchParams();
+    if (params) {
+      if (params.status && params.status !== "All") query.set("status", params.status);
+      if (params.leadId) query.set("leadId", params.leadId);
+      if (params.lender && params.lender !== "All") query.set("lender", params.lender);
+      if (params.relationshipManager) query.set("relationshipManager", params.relationshipManager);
+      if (params.search) query.set("search", params.search);
+      if (params.page) query.set("page", String(params.page));
+      if (params.limit) query.set("limit", String(params.limit));
+    }
+
+    const res = await fetch(`${API_BASE_URL}/loan-applications?${query.toString()}`, {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to fetch loan applications." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function fetchLoanApplicationSummaryApi(): Promise<{
+  success: boolean;
+  summary?: any;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/loan-applications/summary`, {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to fetch loan processing summary." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function fetchLoanApplicationByIdApi(id: string): Promise<{
+  success: boolean;
+  application?: any;
+  disbursements?: any[];
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/loan-applications/${encodeURIComponent(id)}`, {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to fetch loan application details." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function createLoanApplicationsApi(payload: {
+  leadId: string;
+  lenders: Array<{ lender: string; requestedAmount: number; notes?: string }>;
+  programType?: string;
+  loanProduct?: string;
+  selectedDocumentIds?: string[];
+}): Promise<{
+  success: boolean;
+  created?: any[];
+  message?: string;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/loan-applications`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to create lender applications." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function updateLoanApplicationApi(
+  id: string,
+  payload: any
+): Promise<{ success: boolean; application?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/loan-applications/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to update loan application." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function recordBankSubmissionApi(
+  id: string,
+  payload: {
+    submissionChannel: "Bank Portal" | "Email" | "API" | "Branch Physical";
+    bankReferenceNumber: string;
+    submissionDate?: string;
+    notes?: string;
+    acknowledgementDocUrl?: string;
+  }
+): Promise<{ success: boolean; application?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/loan-applications/${encodeURIComponent(id)}/submit`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to record bank submission." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function updateLoanApplicationStatusApi(
+  id: string,
+  payload: {
+    status: string;
+    remarks?: string;
+  }
+): Promise<{ success: boolean; application?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/loan-applications/${encodeURIComponent(id)}/status`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to update application status." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function addBankQueryApi(
+  id: string,
+  payload: {
+    queryTitle: string;
+    description: string;
+    deadline?: string;
+    priority?: string;
+  }
+): Promise<{ success: boolean; application?: any; query?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/loan-applications/${encodeURIComponent(id)}/queries`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to add bank query." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function respondBankQueryApi(
+  id: string,
+  queryId: string,
+  payload: {
+    response: string;
+    attachmentUrls?: string[];
+    isResolved?: boolean;
+  }
+): Promise<{ success: boolean; application?: any; error?: string }> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/loan-applications/${encodeURIComponent(id)}/queries/${encodeURIComponent(queryId)}/respond`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(payload),
+      }
+    );
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to respond to bank query." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function recordSanctionDecisionApi(
+  id: string,
+  payload: {
+    decision: "Sanctioned" | "Rejected";
+    sanctionedAmount?: number;
+    interestRate?: number;
+    interestType?: "Fixed" | "Floating";
+    loanTenureMonths?: number;
+    moratoriumPeriodMonths?: number;
+    processingFee?: number;
+    sanctionDate?: string;
+    sanctionLetterUrl?: string;
+    sanctionReferenceNumber?: string;
+    rejectionReason?: string;
+    rejectionCategory?: string;
+    notes?: string;
+  }
+): Promise<{ success: boolean; application?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/loan-applications/${encodeURIComponent(id)}/decision`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to record sanction/decision." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function recordStudentAcceptanceApi(
+  id: string,
+  payload: {
+    studentAcceptance: "Accepted" | "Rejected" | "Clarification Requested";
+    acceptanceDate?: string;
+    studentRemarks?: string;
+  }
+): Promise<{ success: boolean; application?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/loan-applications/${encodeURIComponent(id)}/student-acceptance`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to record student acceptance." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function updateAgreementAndConditionsApi(
+  id: string,
+  payload: {
+    agreementSignedDate?: string;
+    agreementDocumentUrl?: string;
+    stampDutyPaid?: boolean;
+    nachSubmitted?: boolean;
+    conditions?: Array<{
+      conditionType: string;
+      title: string;
+      description?: string;
+      status: "Pending" | "Submitted" | "Under Verification" | "Verified" | "Rejected" | "Not Applicable";
+      verificationRemarks?: string;
+    }>;
+  }
+): Promise<{ success: boolean; application?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/loan-applications/${encodeURIComponent(id)}/agreement-conditions`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to update agreement & conditions." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+// -------------------------------------------------------------
+// MULTI-TRANCHE DISBURSEMENT APIS
+// -------------------------------------------------------------
+
+export async function fetchDisbursementsApi(params?: {
+  loanApplicationId?: string;
+  leadId?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  success: boolean;
+  disbursements?: any[];
+  summary?: any;
+  pagination?: any;
+  error?: string;
+}> {
+  try {
+    const query = new URLSearchParams();
+    if (params) {
+      if (params.loanApplicationId) query.set("loanApplicationId", params.loanApplicationId);
+      if (params.leadId) query.set("leadId", params.leadId);
+      if (params.status && params.status !== "All") query.set("status", params.status);
+      if (params.page) query.set("page", String(params.page));
+      if (params.limit) query.set("limit", String(params.limit));
+    }
+
+    const res = await fetch(`${API_BASE_URL}/disbursements?${query.toString()}`, {
+      method: "GET",
+      headers: authHeaders(),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to fetch disbursements." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function createDisbursementApi(payload: {
+  loanApplicationId: string;
+  leadId: string;
+  trancheNumber?: number;
+  purpose: "Tuition Fee" | "Living Expense" | "Insurance" | "Travel / Forex" | "Other";
+  beneficiaryType: "University Directly" | "Student Account" | "Co-borrower Account" | "Forex Vendor";
+  beneficiaryName: string;
+  beneficiaryAccount?: string;
+  beneficiaryBankIfscSwift?: string;
+  requestedAmount: number;
+  notes?: string;
+}): Promise<{ success: boolean; disbursement?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/disbursements`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to create disbursement tranche." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
+  }
+}
+
+export async function updateDisbursementApi(
+  id: string,
+  payload: {
+    status?: "Requested" | "Bank Approved" | "Disbursed" | "Partially Disbursed" | "On Hold" | "Cancelled";
+    approvedAmount?: number;
+    disbursedAmount?: number;
+    utrNumber?: string;
+    paymentDate?: string;
+    disbursementReceiptUrl?: string;
+    remarks?: string;
+  }
+): Promise<{ success: boolean; disbursement?: any; error?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/disbursements/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    handleAuthStatus(res);
+    const data = await res.json();
+    if (!res.ok) {
+      return { success: false, error: data.error || "Failed to update disbursement tranche." };
+    }
+    return data;
+  } catch (err) {
+    return { success: false, error: "Unable to connect to backend server." };
   }
 }

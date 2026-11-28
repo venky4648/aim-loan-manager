@@ -183,22 +183,22 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
           <div className="mt-2 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               {currentInterest === "Interested" && (
-                <span className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-700">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-slate-900 text-white">
                   <CheckCircle2 className="size-5" />
                 </span>
               )}
               {currentInterest === "Not Interested" && (
-                <span className="flex size-8 items-center justify-center rounded-lg bg-rose-500/15 text-rose-700">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-slate-200 text-slate-700">
                   <XCircle className="size-5" />
                 </span>
               )}
               {currentInterest === "Follow-up Required" && (
-                <span className="flex size-8 items-center justify-center rounded-lg bg-amber-500/15 text-amber-700">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-slate-200 text-slate-800">
                   <Clock className="size-5" />
                 </span>
               )}
               {currentInterest === "Not Contacted" && (
-                <span className="flex size-8 items-center justify-center rounded-lg bg-slate-500/15 text-slate-700">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                   <HelpCircle className="size-5" />
                 </span>
               )}
@@ -220,7 +220,7 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
             </div>
 
             {currentInterest === "Interested" && (
-              <span className="hidden sm:inline-flex text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              <span className="hidden sm:inline-flex text-[11px] font-semibold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
                 Ready for Docs
               </span>
             )}
@@ -230,19 +230,19 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
 
       {/* Interested Confirmation Banner */}
       {currentInterest === "Interested" && (
-        <div className="mt-4 p-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-between gap-3">
+        <div className="mt-4 p-4 rounded-xl border border-slate-300 bg-slate-50 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="size-5 text-emerald-600 shrink-0" />
+            <CheckCircle2 className="size-5 text-slate-800 shrink-0" />
             <div>
-              <p className="text-xs font-bold text-emerald-950">
+              <p className="text-xs font-bold text-slate-900">
                 Interest Confirmed — Student is Interested in Loan Assistance!
               </p>
-              <p className="text-[11px] text-emerald-800">
+              <p className="text-[11px] text-slate-600">
                 Step 3 (Document Collection) is now unlocked below. Collect applicant and co-applicant documents.
               </p>
             </div>
           </div>
-          <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-md shrink-0">
+          <span className="text-[11px] font-bold text-slate-900 bg-slate-200 border border-slate-300 px-2.5 py-1 rounded-md shrink-0">
             Step 1 Complete ✓
           </span>
         </div>
@@ -250,14 +250,14 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
 
       {/* Not Interested Alert Banner */}
       {currentInterest === "Not Interested" && (
-        <div className="mt-4 p-4 rounded-xl border-2 border-rose-500/30 bg-rose-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="mt-4 p-4 rounded-xl border border-slate-300 bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3">
-            <XCircle className="size-5 text-rose-600 shrink-0 mt-0.5" />
+            <XCircle className="size-5 text-slate-700 shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-bold text-rose-900">
+              <p className="text-xs font-bold text-slate-900">
                 Student Marked as Not Interested
               </p>
-              <p className="text-xs text-rose-800 mt-0.5">
+              <p className="text-xs text-slate-600 mt-0.5">
                 <strong>Reason:</strong>{" "}
                 {record.notInterestedReason || "No specific reason provided."}
               </p>
@@ -268,7 +268,7 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
             <Button
               size="sm"
               onClick={() => setReactivateModalOpen(true)}
-              className="bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs shrink-0"
+              className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shrink-0"
             >
               <RotateCcw className="mr-1.5 size-3.5" /> Reactivate Lead
             </Button>
@@ -278,10 +278,10 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
 
       {/* Follow-up Required Prompt Banner */}
       {currentInterest === "Follow-up Required" && (
-        <div className="mt-4 p-4 rounded-xl border-2 border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-3">
+        <div className="mt-4 p-4 rounded-xl border border-slate-300 bg-slate-50 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Clock className="size-5 text-amber-600 shrink-0" />
-            <p className="text-xs text-amber-900 font-medium">
+            <Clock className="size-5 text-slate-700 shrink-0" />
+            <p className="text-xs text-slate-800 font-medium">
               Student requested a callback before confirming loan interest. See the Follow-up Manager below to schedule or complete calls.
             </p>
           </div>
@@ -323,10 +323,10 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
               </Label>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {[
-                  { id: "Interested", label: "Interested", icon: CheckCircle2, color: "text-emerald-600 border-emerald-500/40 bg-emerald-500/10" },
-                  { id: "Follow-up Required", label: "Follow-up Required", icon: Clock, color: "text-amber-600 border-amber-500/40 bg-amber-500/10" },
-                  { id: "Not Interested", label: "Not Interested", icon: XCircle, color: "text-rose-600 border-rose-500/40 bg-rose-500/10" },
-                  { id: "Not Contacted", label: "Not Contacted", icon: HelpCircle, color: "text-slate-600 border-slate-500/40 bg-slate-500/10" },
+                  { id: "Interested", label: "Interested", icon: CheckCircle2, color: "text-white border-slate-900 bg-slate-900" },
+                  { id: "Follow-up Required", label: "Follow-up Required", icon: Clock, color: "text-slate-900 border-slate-400 bg-slate-200" },
+                  { id: "Not Interested", label: "Not Interested", icon: XCircle, color: "text-slate-700 border-slate-300 bg-slate-100" },
+                  { id: "Not Contacted", label: "Not Contacted", icon: HelpCircle, color: "text-slate-700 border-slate-300 bg-slate-100" },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -334,8 +334,8 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
                     onClick={() => setInterestStatus(item.id as InterestStatus)}
                     className={`flex items-center gap-2 p-3 rounded-lg border text-left text-xs font-bold transition-all ${
                       interestStatus === item.id
-                        ? `${item.color} ring-2 ring-primary/40`
-                        : "border-border bg-card hover:bg-muted/50 text-foreground"
+                        ? `${item.color} ring-1 ring-slate-900`
+                        : "border-border bg-card hover:bg-slate-100 text-foreground"
                     }`}
                   >
                     <item.icon className="size-4 shrink-0" />
@@ -347,14 +347,14 @@ export function FirstContactSection({ record }: FirstContactSectionProps) {
 
             {/* If Not Interested: Ask Reason */}
             {interestStatus === "Not Interested" && (
-              <div className="space-y-2 p-3.5 rounded-lg border border-rose-500/30 bg-rose-500/5 animate-in fade-in-50">
-                <Label className="text-xs font-bold text-rose-900">
-                  Reason for Not Interested <span className="text-rose-600">*</span>
+              <div className="space-y-2 p-3.5 rounded-lg border border-slate-300 bg-slate-50 animate-in fade-in-50">
+                <Label className="text-xs font-bold text-slate-900">
+                  Reason for Not Interested <span className="text-slate-500">*</span>
                 </Label>
                 <select
                   value={notInterestedReason}
                   onChange={(e) => setNotInterestedReason(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-xs font-medium focus:ring-1 focus:ring-slate-900 focus:outline-none"
                 >
                   {COMMON_NOT_INTERESTED_REASONS.map((r) => (
                     <option key={r} value={r}>

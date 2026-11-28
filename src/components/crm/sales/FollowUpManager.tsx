@@ -263,9 +263,9 @@ export function FollowUpManager({ record }: FollowUpManagerProps) {
               key={item.id}
               className={`p-4 rounded-xl border transition-all ${
                 isOverdue
-                  ? "border-rose-400 bg-rose-500/10 ring-1 ring-rose-400"
+                  ? "border-slate-400 bg-slate-50 ring-1 ring-slate-400"
                   : isCompleted
-                  ? "border-emerald-200 bg-emerald-500/5 opacity-80"
+                  ? "border-slate-300 bg-slate-50 opacity-80"
                   : "border-border bg-card/70 hover:bg-card"
               }`}
             >
@@ -273,24 +273,24 @@ export function FollowUpManager({ record }: FollowUpManagerProps) {
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-bold text-foreground flex items-center gap-1">
-                      <Calendar className="size-3.5 text-primary" />
+                      <Calendar className="size-3.5 text-slate-700" />
                       {formatDateTime(item.scheduledAt)}
                     </span>
 
                     {isOverdue && (
-                      <span className="rounded-full bg-rose-600 px-2.5 py-0.5 text-[10px] font-extrabold text-white animate-pulse">
+                      <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-[10px] font-extrabold text-white">
                         OVERDUE
                       </span>
                     )}
 
                     {effectiveStatus === "Upcoming" && (
-                      <span className="rounded-full bg-blue-500/15 text-blue-700 px-2.5 py-0.5 text-[10px] font-bold border border-blue-500/30">
+                      <span className="rounded-full bg-slate-200 text-slate-900 px-2.5 py-0.5 text-[10px] font-bold border border-slate-300">
                         Scheduled
                       </span>
                     )}
 
                     {isCompleted && (
-                      <span className="rounded-full bg-emerald-500/15 text-emerald-700 px-2.5 py-0.5 text-[10px] font-bold border border-emerald-500/30 flex items-center gap-1">
+                      <span className="rounded-full bg-slate-100 text-slate-800 px-2.5 py-0.5 text-[10px] font-bold border border-slate-300 flex items-center gap-1">
                         <CheckCircle2 className="size-3" /> Completed
                       </span>
                     )}
@@ -311,13 +311,13 @@ export function FollowUpManager({ record }: FollowUpManagerProps) {
                   </p>
 
                   {isCompleted && item.completionNote && (
-                    <div className="mt-2 p-2.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-900">
+                    <div className="mt-2 p-2.5 rounded bg-slate-100 border border-slate-200 text-xs text-slate-900">
                       <strong>Completion Outcome:</strong> {item.completionNote}
                     </div>
                   )}
 
                   {item.rescheduleReason && (
-                    <p className="text-[11px] text-amber-700 font-medium">
+                    <p className="text-[11px] text-slate-600 font-medium">
                       Rescheduled note: {item.rescheduleReason}
                     </p>
                   )}
@@ -329,7 +329,7 @@ export function FollowUpManager({ record }: FollowUpManagerProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 text-xs font-semibold text-primary border-primary/40 hover:bg-primary/10"
+                      className="h-8 text-xs font-semibold"
                       onClick={() => toast.success(`Simulating call to ${record.student} (${record.phone})...`)}
                     >
                       <PhoneCall className="mr-1 size-3" /> Call
@@ -337,7 +337,7 @@ export function FollowUpManager({ record }: FollowUpManagerProps) {
 
                     <Button
                       size="sm"
-                      className="h-8 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                      className="h-8 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white"
                       onClick={() => handleOpenComplete(item)}
                     >
                       <CheckCircle2 className="mr-1 size-3" /> Mark Done
@@ -355,7 +355,7 @@ export function FollowUpManager({ record }: FollowUpManagerProps) {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 text-xs font-semibold text-rose-600 hover:bg-rose-50"
+                      className="h-8 text-xs font-semibold text-slate-600 hover:bg-slate-100"
                       onClick={() => handleCancelFollowUp(item)}
                     >
                       <XCircle className="size-3.5" />
@@ -484,7 +484,7 @@ export function FollowUpManager({ record }: FollowUpManagerProps) {
               <Button
                 type="submit"
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                className="bg-slate-900 hover:bg-slate-800 text-white font-semibold"
               >
                 Mark as Completed
               </Button>

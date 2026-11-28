@@ -41,7 +41,7 @@ function Reports() {
           onClick={() => exportReportsToExcel(FUNNEL, byCountry, byOwner, "reports_analytics")}
           title="Export analytics report to Excel"
         >
-          <Download className="size-4 text-emerald-600" />
+          <Download className="size-4 text-slate-700" />
           <span>Export to Excel</span>
         </Button>
       }

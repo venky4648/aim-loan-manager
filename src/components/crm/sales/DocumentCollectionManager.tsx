@@ -27,12 +27,12 @@ const SECTION_CONFIG: Array<{
 
 function statusStyle(status: DocCollectionStatus) {
   if (status === "Received") {
-    return "border-emerald-500/30 bg-emerald-500/15 text-emerald-700";
+    return "border-slate-800 bg-slate-900 text-white font-semibold";
   }
   if (status === "Partially Received") {
-    return "border-amber-500/30 bg-amber-500/15 text-amber-700";
+    return "border-slate-400 bg-slate-200 text-slate-900 font-semibold";
   }
-  return "border-rose-500/30 bg-rose-500/15 text-rose-700";
+  return "border-slate-300 bg-slate-100 text-slate-700 font-medium";
 }
 
 function statusIcon(status: DocCollectionStatus) {
@@ -122,14 +122,10 @@ export function DocumentCollectionManager({
                       (status) => (
                         <label
                           key={status}
-                          className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 text-sm font-semibold ${
+                          className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 text-sm font-semibold transition-colors ${
                             draftStatus === status
-                              ? status === "Received"
-                                ? "border-emerald-600 bg-emerald-600 text-white"
-                                : status === "Partially Received"
-                                  ? "border-amber-500 bg-amber-500 text-white"
-                                  : "border-rose-600 bg-rose-600 text-white"
-                              : "border-border bg-background text-foreground hover:bg-muted"
+                              ? "border-slate-900 bg-slate-900 text-white"
+                              : "border-border bg-background text-foreground hover:bg-slate-100"
                           }`}
                         >
                           <input

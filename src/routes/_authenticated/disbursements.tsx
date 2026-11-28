@@ -35,7 +35,7 @@ function Disbursements() {
           onClick={() => exportDisbursementsToExcel(rows, "disbursements_payouts")}
           title={`Export ${rows.length} cases to Excel`}
         >
-          <Download className="size-4 text-emerald-600" />
+          <Download className="size-4 text-slate-700" />
           <span>Export to Excel</span>
           <span className="text-[11px] bg-muted px-1.5 py-0.5 rounded font-mono text-muted-foreground font-normal">
             ({rows.length})
@@ -82,9 +82,8 @@ function Disbursements() {
                   <td className="px-5 py-4 stat-figure font-bold text-[#0F2237] group-hover:text-[#F26500] transition-colors">{c.commission ? formatINR(c.commission) : "—"}</td>
                   <td className="px-5 py-4">
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        c.commissionReceived ? "bg-success/15 text-success" : "bg-warning/20 text-warning-foreground"
-                      }`}
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${c.commissionReceived ? "bg-success/15 text-success" : "bg-warning/20 text-warning-foreground"
+                        }`}
                     >
                       {c.commissionReceived ? "Received" : "Pending"}
                     </span>

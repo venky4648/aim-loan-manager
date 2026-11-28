@@ -25,6 +25,7 @@ import {
   updateFirstContactApi,
   reactivateLeadApi,
   handoverLeadApi,
+  returnLeadToSalesApi,
   updateLeadLenderApi,
   addCommentApi,
   submitToLenderApi,
@@ -295,6 +296,13 @@ interface CasesContextType {
     payload: {
       handoverRemarks: string;
       processingOwner?: string | undefined;
+      authorName: string;
+    }
+  ) => void;
+  returnLeadToSales: (
+    caseId: string,
+    payload: {
+      reason: string;
       authorName: string;
     }
   ) => void;
@@ -1326,7 +1334,8 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
         return {
           ...c,
           handover: newHandover,
-          stage: "Sent to Lender",
+          stage: "Docs Collected" as CaseStage,
+          returnToSales: { isReturned: false },
           updated: "Just now",
           activities: newActivities,
         };
@@ -1342,6 +1351,58 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
     }).catch((err) => console.warn("[CasesProvider] Failed to sync handover to backend:", err));
 
     toast.success("Application successfully handed over to Processing Team!");
+  };
+
+  // 10b. Return File to Sales Team for Corrections
+  const returnLeadToSales = (
+    caseId: string,
+    payload: {
+      reason: string;
+      authorName: string;
+    }
+  ) => {
+    const nowIso = new Date().toISOString();
+    setCases((prev) =>
+      prev.map((c) => {
+        if (c.id !== caseId) return c;
+
+        const newActivities: ActivityItem[] = [
+          {
+            id: `act_${Date.now()}`,
+            caseId,
+            type: "system",
+            description: `Application file returned to Sales Team for corrections by ${payload.authorName}.`,
+            comment: payload.reason,
+            updatedBy: payload.authorName,
+            timestamp: nowIso,
+          },
+          ...(c.activities || []),
+        ];
+
+        return {
+          ...c,
+          stage: "Returned for Corrections" as CaseStage,
+          handover: {
+            ...(c.handover || { isHandedOver: false }),
+            isHandedOver: false,
+          },
+          returnToSales: {
+            isReturned: true,
+            returnedAt: nowIso,
+            returnedBy: payload.authorName,
+            returnReason: payload.reason,
+          },
+          updated: "Just now",
+          activities: newActivities,
+        };
+      })
+    );
+
+    returnLeadToSalesApi(caseId, payload).catch((err: any) =>
+      console.warn("[CasesProvider] Failed to sync return-to-sales to backend:", err)
+    );
+
+    toast.warning("Application returned to Sales Team for corrections.");
   };
 
   // 11. Add Note / Free Comment
@@ -1787,7 +1848,7 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
       university: newCaseData.university || "University Partner",
       loanType: newCaseData.loanType || "Unsecured",
       amount: newCaseData.amount || 3500000,
-      stage: "New Lead",
+      stage: newCaseData.stage || "New Lead",
       lender: newCaseData.lender || "Not assigned",
       owner: newCaseData.owner || "Praveen K",
       source: newCaseData.source || "Customer reference",
@@ -1822,8 +1883,8 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
       timeline: [
         { date: "Today", label: "Lead captured from registration", by: "System" },
       ],
-      contactStatus: "Not Contacted",
-      interestStatus: "Not Contacted",
+      contactStatus: newCaseData.contactStatus || "Not Contacted",
+      interestStatus: newCaseData.interestStatus || "Not Contacted",
       workflowDocuments: [
         { id: "doc_1", name: "Aadhaar & PAN", required: true, collectionStatus: "Not Received", verificationStatus: "Pending" },
         { id: "doc_2", name: "Admission letter", required: true, collectionStatus: "Not Received", verificationStatus: "Pending" },
@@ -1831,7 +1892,7 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
         { id: "doc_4", name: "Income proof", required: true, collectionStatus: "Not Received", verificationStatus: "Pending" },
         { id: "doc_5", name: "Bank statements (6 months)", required: true, collectionStatus: "Not Received", verificationStatus: "Pending" },
       ],
-      handover: {
+      handover: newCaseData.handover || {
         isHandedOver: false,
       },
       followUps: [],
@@ -2044,6 +2105,7 @@ export function CasesProvider({ children }: { children: React.ReactNode }) {
         updateDocumentStatus,
         markReadyForProcessing,
         handoverToProcessing,
+        returnLeadToSales,
         addComment,
         updateLender,
         markLenderRejected,

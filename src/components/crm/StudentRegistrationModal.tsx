@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Dialog,
   DialogContent,
@@ -11,9 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useCases } from "@/lib/cases-context";
+import { useAuth } from "@/lib/auth-context";
 import { REFERRAL_SOURCES } from "@/lib/demo-data";
 import {
   DocumentUploadSection,
@@ -240,10 +242,13 @@ export function StudentRegistrationModal({
   open,
   onOpenChange,
 }: StudentRegistrationModalProps) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { addCase } = useCases();
   const [step, setStep] = useState<1 | 2>(1);
   const [data, setData] = useState<RegistrationFormData>(INITIAL_DATA);
   const [submitted, setSubmitted] = useState(false);
+  const [createdCaseId, setCreatedCaseId] = useState<string | null>(null);
 
   const updateField = <K extends keyof RegistrationFormData>(
     field: K,
@@ -256,10 +261,17 @@ export function StudentRegistrationModal({
     setData(INITIAL_DATA);
     setStep(1);
     setSubmitted(false);
+    setCreatedCaseId(null);
   };
 
   const submit = () => {
-    addCase({
+    const newCase = addCase({
+      stage: "New Lead",
+      interestStatus: "Not Contacted",
+      contactStatus: "Not Contacted",
+      handover: {
+        isHandedOver: false,
+      },
       student: data.fullName,
       phone: data.mobile,
       alternativePhone: data.alternativePhone,
@@ -346,6 +358,7 @@ export function StudentRegistrationModal({
       propertyDocuments: data.propertyDocuments,
     });
 
+    setCreatedCaseId(newCase.id);
     setSubmitted(true);
     toast.success("Student lead registered successfully.");
   };
@@ -367,15 +380,26 @@ export function StudentRegistrationModal({
         </DialogHeader>
 
         {submitted ? (
-          <div className="px-6 py-10 text-center">
+          <div className="px-6 py-10 text-center space-y-3">
             <CheckCircle2 className="mx-auto size-14 text-success" />
-            <h3 className="mt-4 text-2xl font-bold">Student lead registered</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              The lead and available details have been added to the CRM pipeline.
+            <h3 className="mt-4 text-2xl font-bold">Student Lead Registered</h3>
+            <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+              The lead has been added to your Sales pipeline. Contact the student to collect their documents, then handover the verified file to the Relationship Manager in Step 4.
             </p>
-            <div className="mt-6 flex justify-center gap-3">
+            <div className="mt-6 flex flex-wrap justify-center gap-3 pt-2">
+              {createdCaseId && (
+                <Button
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate({ to: `/cases/${createdCaseId}` });
+                  }}
+                  className="bg-primary hover:bg-primary/90 text-white font-bold gap-2"
+                >
+                  Open Application File (Manage Case) <ArrowRight className="size-4" />
+                </Button>
+              )}
               <Button variant="outline" onClick={reset}>Add Another Lead</Button>
-              <Button onClick={() => onOpenChange(false)}>Close</Button>
+              <Button variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
             </div>
           </div>
         ) : (
@@ -581,8 +605,8 @@ export function StudentRegistrationModal({
                   Next <ArrowRight className="ml-2 size-4" />
                 </Button>
               ) : (
-                <Button type="button" onClick={submit}>
-                  Submit Lead <CheckCircle2 className="ml-2 size-4" />
+                <Button type="button" onClick={submit} className="font-bold gap-2">
+                  Submit Lead <CheckCircle2 className="size-4" />
                 </Button>
               )}
             </div>

@@ -33,7 +33,7 @@ function Lenders() {
             onClick={() => exportLendersToExcel(LENDERS, "lender_partners_performance")}
             title="Export all lender partners to Excel"
           >
-            <Download className="size-4 text-emerald-600" />
+            <Download className="size-4 text-slate-700" />
             <span>Export to Excel</span>
           </Button>
           <Button size="sm" className="font-semibold shadow-md shadow-primary/20">

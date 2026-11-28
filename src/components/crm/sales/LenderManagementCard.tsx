@@ -45,7 +45,8 @@ const COMMON_REJECTION_REASONS = [
 export function LenderManagementCard({ record }: LenderManagementCardProps) {
   if (!record) return null;
 
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const canManageLender = role === "relationship_manager" || role === "superadmin";
   const {
     submitToLender,
     updateLenderDecision,
@@ -213,16 +214,16 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
 
           {/* Quick Lock / Unlock Status Pill */}
           {isLocked ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 border border-blue-500/25 shrink-0">
-              <Lock className="size-3 text-blue-600" /> File Locked
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-2.5 py-0.5 text-[11px] font-semibold text-white shrink-0">
+              <Lock className="size-3" /> File Locked
             </span>
           ) : isRejected ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-500/25 shrink-0">
-              <Unlock className="size-3 text-rose-600" /> Unlocked
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 text-[11px] font-semibold text-slate-800 border border-slate-300 shrink-0">
+              <Unlock className="size-3" /> Unlocked
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-500/10 px-2.5 py-0.5 text-[11px] font-bold text-slate-700 border border-slate-500/25 shrink-0">
-              <Unlock className="size-3 text-slate-600" /> Ready
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 border border-slate-300 shrink-0">
+              <Unlock className="size-3" /> Ready
             </span>
           )}
         </div>
@@ -230,28 +231,28 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
         {/* Current State Status Pill */}
         <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
           {currentStatus === "Sanctioned" && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-500/30">
-              <CheckCircle2 className="size-3.5 text-emerald-600" /> Sanction Letter Issued
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2 py-0.5 text-xs font-semibold text-white border border-slate-900">
+              <CheckCircle2 className="size-3.5" /> Sanction Letter Issued
             </span>
           )}
           {currentStatus === "Disbursed" && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-green-500/15 px-2 py-0.5 text-xs font-bold text-green-700 border border-green-500/30">
-              <CheckCircle2 className="size-3.5 text-green-600" /> Loan Disbursed
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-950 px-2 py-0.5 text-xs font-bold text-white border border-slate-950">
+              <CheckCircle2 className="size-3.5" /> Loan Disbursed
             </span>
           )}
           {currentStatus === "In Underwriting" && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/15 px-2 py-0.5 text-xs font-bold text-indigo-700 border border-indigo-500/30">
-              <Clock className="size-3.5 text-indigo-600" /> In Credit Review
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-900 border border-slate-300">
+              <Clock className="size-3.5" /> In Credit Review
             </span>
           )}
           {currentStatus === "Submitted" && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-700 border border-amber-500/30">
-              <Send className="size-3.5 text-amber-600" /> Submitted & Logged In
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-xs font-semibold text-white border border-slate-800">
+              <Send className="size-3.5" /> Submitted & Logged In
             </span>
           )}
           {currentStatus === "Rejected" && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-rose-500/15 px-2 py-0.5 text-xs font-bold text-rose-700 border border-rose-500/30">
-              <XCircle className="size-3.5 text-rose-600" /> Application Declined
+            <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 border border-slate-300 line-through">
+              <XCircle className="size-3.5" /> Application Declined
             </span>
           )}
           {isLocked && currentLender && (
@@ -315,66 +316,77 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
           </div>
         ) : null}
 
-        {/* Action Buttons Toolbar (Stacked / Grid layout with zero overlap) */}
-        <div className="space-y-2 pt-1">
-          {!currentLender || (!isLocked && !isRejected) ? (
-            <Button
-              size="sm"
-              onClick={handleOpenSubmit}
-              className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-xs h-9 justify-center gap-2 shadow-sm"
-            >
-              <Send className="size-3.5" />
-              {currentLender ? `Send File Directly to ${currentLender}` : "Select Lender & Submit File"}
-            </Button>
-          ) : null}
-
-          {isLocked && (
-            <div className="space-y-2">
-              {/* Primary Action Button */}
+        {/* Action Buttons Toolbar (Only available to Relationship Managers & Super Admin) */}
+        {canManageLender ? (
+          <div className="space-y-2 pt-1">
+            {!currentLender || (!isLocked && !isRejected) ? (
               <Button
                 size="sm"
-                onClick={handleOpenDecision}
+                onClick={handleOpenSubmit}
                 className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-xs h-9 justify-center gap-2 shadow-sm"
               >
-                <FileCheck2 className="size-4" />
-                Update Decision / Sanction
+                <Send className="size-3.5" />
+                {currentLender ? `Send File Directly to ${currentLender}` : "Select Lender & Submit File"}
               </Button>
+            ) : null}
 
-              {/* Secondary Actions Row */}
-              <div className="grid grid-cols-2 gap-2">
+            {isLocked && (
+              <div className="space-y-2">
+                {/* Primary Action Button */}
                 <Button
                   size="sm"
-                  variant="outline"
-                  onClick={handleOpenReroute}
-                  className="w-full text-xs font-semibold h-8 justify-center gap-1 border-border bg-card hover:bg-muted"
+                  onClick={handleOpenDecision}
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-xs h-9 justify-center gap-2 shadow-sm"
                 >
-                  <RotateCcw className="size-3 text-muted-foreground" />
-                  Change Lender
+                  <FileCheck2 className="size-4" />
+                  Update Decision / Sanction
                 </Button>
 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleOpenReject}
-                  className="w-full text-xs font-semibold h-8 justify-center gap-1 border-rose-500/30 text-rose-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-500/50"
-                >
-                  <XCircle className="size-3 text-rose-600" />
-                  Mark Declined
-                </Button>
+                {/* Secondary Actions Row */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOpenReroute}
+                    className="w-full text-xs font-semibold h-8 justify-center gap-1 border-slate-300 bg-white text-slate-800 hover:bg-slate-100"
+                  >
+                    <RotateCcw className="size-3 text-slate-500" />
+                    Change Lender
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOpenReject}
+                    className="w-full text-xs font-semibold h-8 justify-center gap-1 border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                  >
+                    <XCircle className="size-3 text-slate-500" />
+                    Mark Declined
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {isRejected && (
-            <Button
-              size="sm"
-              onClick={handleOpenReroute}
-              className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-9 justify-center gap-2 shadow-sm"
-            >
-              <RotateCcw className="size-3.5" /> Re-route to New Lender
-            </Button>
-          )}
-        </div>
+            {isRejected && (
+              <Button
+                size="sm"
+                onClick={handleOpenReroute}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9 justify-center gap-2 shadow-sm"
+              >
+                <RotateCcw className="size-3.5" /> Re-route to New Lender
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="p-3 rounded-lg bg-card border border-border text-center space-y-1 mt-1">
+            <span className="text-[11px] font-bold text-foreground block">
+              Processing Desk Managed
+            </span>
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              Lender partner selection, bank file submission, and sanction decisions are managed exclusively by the Relationship Manager.
+            </p>
+          </div>
+        )}
 
         {/* Live Partner Performance Metrics (2x2 Grid) */}
         {currentLender && (
@@ -383,7 +395,7 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
               <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                 Sanction Rate
               </span>
-              <span className="text-xs font-extrabold text-emerald-600 mt-0.5 block">
+              <span className="text-xs font-bold text-slate-900 mt-0.5 block">
                 {partnerMeta.sanctionRate}% Sanctions
               </span>
             </div>
@@ -391,7 +403,7 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
               <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                 Average TAT
               </span>
-              <span className="text-xs font-extrabold text-foreground mt-0.5 block">
+              <span className="text-xs font-bold text-foreground mt-0.5 block">
                 {partnerMeta.avgTat}
               </span>
             </div>
@@ -399,7 +411,7 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
               <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                 Sanctioned Amount
               </span>
-              <span className="text-xs font-extrabold text-foreground mt-0.5 block truncate">
+              <span className="text-xs font-bold text-foreground mt-0.5 block truncate">
                 {record.sanctioned ? formatINR(record.sanctioned) : "Pending"}
               </span>
             </div>
@@ -407,7 +419,7 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
               <span className="text-[10px] uppercase font-semibold text-muted-foreground block">
                 Interest Rate (ROI)
               </span>
-              <span className="text-xs font-extrabold text-primary mt-0.5 block truncate">
+              <span className="text-xs font-bold text-foreground mt-0.5 block truncate">
                 {record.roi ? `${record.roi}% p.a.` : "TBD"}
               </span>
             </div>
@@ -417,34 +429,40 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
 
       {/* REJECTION RECOVERY CALLOUT */}
       {isRejected && (
-        <div className="p-3.5 rounded-xl border-2 border-rose-500/40 bg-rose-500/10 space-y-3">
+        <div className="p-3.5 rounded-xl border border-slate-300 bg-slate-50 space-y-3">
           <div className="flex items-start gap-2.5">
-            <AlertCircle className="size-4 text-rose-600 shrink-0 mt-0.5" />
+            <AlertCircle className="size-4 text-slate-700 shrink-0 mt-0.5" />
             <div className="space-y-1 min-w-0">
-              <h4 className="text-xs font-bold text-rose-950">
+              <h4 className="text-xs font-bold text-slate-900">
                 Application Declined by {currentLender}
               </h4>
-              <p className="text-xs text-rose-800 leading-relaxed bg-card/60 p-2 rounded border border-rose-200">
+              <p className="text-xs text-slate-700 leading-relaxed bg-white p-2 rounded border border-slate-200">
                 <strong>Decline Reason:</strong>{" "}
                 {record.lenderRejectionReason || "Lender credit policy criteria not met."}
               </p>
             </div>
           </div>
 
-          <div className="p-3 rounded-lg bg-card border border-rose-500/20 space-y-2">
+          <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-2">
             <p className="text-xs text-foreground font-bold leading-tight">
               Re-route to an alternative partner to save this deal
             </p>
             <p className="text-[11px] text-muted-foreground leading-snug">
               The file lock has been released. Select a new lending partner to initiate a fresh submission cycle.
             </p>
-            <Button
-              size="sm"
-              onClick={handleOpenReroute}
-              className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-9 justify-center gap-1.5 shadow-sm"
-            >
-              <RotateCcw className="size-3.5" /> Re-route Deal to New Lender
-            </Button>
+            {canManageLender ? (
+              <Button
+                size="sm"
+                onClick={handleOpenReroute}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9 justify-center gap-1.5 shadow-sm"
+              >
+                <RotateCcw className="size-3.5" /> Re-route Deal to New Lender
+              </Button>
+            ) : (
+              <p className="text-[10px] text-muted-foreground italic">
+                Awaiting Relationship Manager to select alternative partner and re-submit.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -477,19 +495,19 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
 
                   <div>
                     {sub.status === "Sanctioned" ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-500/30 shrink-0">
+                      <span className="inline-flex items-center gap-1 rounded bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-white shrink-0">
                         <CheckCircle2 className="size-3" /> Sanctioned
                       </span>
                     ) : sub.status === "Rejected" ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-500/30 shrink-0">
+                      <span className="inline-flex items-center gap-1 rounded bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-800 border border-slate-300 shrink-0">
                         <XCircle className="size-3" /> Declined
                       </span>
                     ) : sub.status === "In Underwriting" ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-indigo-500/15 px-2 py-0.5 text-[10px] font-bold text-indigo-700 border border-indigo-500/30 shrink-0">
+                      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-800 border border-slate-300 shrink-0">
                         <Clock className="size-3" /> Reviewing
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-500/30 shrink-0">
+                      <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-300 shrink-0">
                         <Send className="size-3" /> Submitted
                       </span>
                     )}
@@ -507,9 +525,9 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
                   </span>
                   <span className="truncate max-w-[170px] text-right font-medium">
                     {sub.rejectionReason ? (
-                      <span className="text-rose-700">{sub.rejectionReason}</span>
+                      <span className="text-slate-800 font-semibold">{sub.rejectionReason}</span>
                     ) : sub.sanctionAmount ? (
-                      <span className="text-emerald-700 font-semibold">
+                      <span className="text-slate-900 font-semibold">
                         {formatINR(sub.sanctionAmount)} @ {sub.roi}%
                       </span>
                     ) : (
@@ -778,7 +796,7 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
               <Button
                 type="submit"
                 size="sm"
-                className="font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="font-bold bg-slate-900 hover:bg-slate-800 text-white"
               >
                 Save Decision
               </Button>
@@ -791,8 +809,8 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
       <Dialog open={rejectModalOpen} onOpenChange={setRejectModalOpen}>
         <DialogContent className="max-w-md border-border bg-card shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg font-bold text-destructive flex items-center gap-2">
-              <AlertCircle className="size-5 text-destructive" />
+            <DialogTitle className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+              <AlertCircle className="size-5 text-slate-700" />
               Mark File Declined by {currentLender}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
@@ -812,7 +830,7 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
                     key={reason}
                     className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer text-xs transition-colors ${
                       rejectionReason === reason
-                        ? "bg-destructive/10 border-destructive/40 text-foreground font-semibold"
+                        ? "bg-slate-100 border-slate-400 text-foreground font-semibold"
                         : "bg-muted/30 border-border text-muted-foreground hover:bg-muted"
                     }`}
                   >
@@ -822,7 +840,7 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
                       value={reason}
                       checked={rejectionReason === reason}
                       onChange={() => setRejectionReason(reason)}
-                      className="mt-0.5 text-destructive"
+                      className="mt-0.5 text-slate-900"
                     />
                     <span>{reason}</span>
                   </label>
@@ -857,7 +875,7 @@ export function LenderManagementCard({ record }: LenderManagementCardProps) {
               <Button
                 type="submit"
                 size="sm"
-                className="bg-destructive hover:bg-destructive/90 text-white font-bold"
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
               >
                 Confirm Decline & Unlock Deal
               </Button>

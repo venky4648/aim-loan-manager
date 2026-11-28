@@ -76,7 +76,7 @@ function RoleBasedDashboard() {
             onClick={() => exportLeadsToExcel(CASES, "normiloans_pipeline_cases")}
             title="Export all cases to Excel"
           >
-            <Download className="size-4 text-emerald-600" />
+            <Download className="size-4 text-slate-700" />
             <span className="hidden sm:inline">Export Excel</span>
           </Button>
 
@@ -110,18 +110,18 @@ function SanctionedVsDisbursedAnalytics() {
   const maxMonth = Math.max(...MONTHLY.map((m) => m.sanctioned));
 
   return (
-    <section className="surface-card p-6 border-2 border-[#CBD5E1]">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-[#CBD5E1] pb-4">
+    <section className="surface-card p-6 border border-border">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
         <div>
-          <h2 className="text-base font-bold text-[#0F2237]">Sanctioned vs Disbursed Analytics</h2>
-          <p className="text-xs text-[#64748B] mt-0.5">Last 6 months performance across all lender partners (in ₹ Lakhs)</p>
+          <h2 className="text-base font-bold text-foreground">Sanctioned vs Disbursed Analytics</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Last 6 months performance across all lender partners (in ₹ Lakhs)</p>
         </div>
         <div className="flex items-center gap-4 text-xs font-semibold">
-          <span className="flex items-center gap-1.5 text-[#0F2237]">
-            <span className="size-3 rounded-xs bg-[#F26500]" /> Sanctioned
+          <span className="flex items-center gap-1.5 text-foreground">
+            <span className="size-3 rounded-xs bg-slate-900" /> Sanctioned
           </span>
-          <span className="flex items-center gap-1.5 text-[#0F2237]">
-            <span className="size-3 rounded-xs bg-[#1E3A5F]" /> Disbursed
+          <span className="flex items-center gap-1.5 text-foreground">
+            <span className="size-3 rounded-xs bg-slate-500" /> Disbursed
           </span>
         </div>
       </div>
@@ -134,14 +134,14 @@ function SanctionedVsDisbursedAnalytics() {
           return (
             <div key={m.month} className="flex h-full flex-1 flex-col items-center justify-end">
               {/* Bars container */}
-              <div className="relative flex h-full w-full items-end justify-center gap-2 border-b-2 border-[#CBD5E1] px-1">
+              <div className="relative flex h-full w-full items-end justify-center gap-2 border-b-2 border-border px-1">
                 {/* Sanctioned Bar */}
                 <div className="group relative flex flex-1 flex-col items-center justify-end h-full">
-                  <span className="mb-1 text-[11px] font-bold text-[#F26500] opacity-90 group-hover:scale-110 transition-transform">
+                  <span className="mb-1 text-[11px] font-bold text-slate-900 opacity-90 group-hover:scale-110 transition-transform">
                     ₹{m.sanctioned}L
                   </span>
                   <div
-                    className="w-full max-w-[28px] rounded-t-md bg-[#F26500] hover:bg-[#E05B00] transition-all shadow-xs"
+                    className="w-full max-w-[28px] rounded-t-md bg-slate-900 hover:bg-slate-800 transition-all shadow-xs"
                     style={{ height: `${sanctionedPct}%` }}
                     title={`${m.month}: Sanctioned ₹${m.sanctioned} Lakhs`}
                   />
@@ -149,11 +149,11 @@ function SanctionedVsDisbursedAnalytics() {
 
                 {/* Disbursed Bar */}
                 <div className="group relative flex flex-1 flex-col items-center justify-end h-full">
-                  <span className="mb-1 text-[11px] font-bold text-[#1E3A5F] opacity-90 group-hover:scale-110 transition-transform">
+                  <span className="mb-1 text-[11px] font-bold text-slate-600 opacity-90 group-hover:scale-110 transition-transform">
                     ₹{m.disbursed}L
                   </span>
                   <div
-                    className="w-full max-w-[28px] rounded-t-md bg-[#1E3A5F] hover:bg-[#0F2237] transition-all shadow-xs"
+                    className="w-full max-w-[28px] rounded-t-md bg-slate-500 hover:bg-slate-600 transition-all shadow-xs"
                     style={{ height: `${disbursedPct}%` }}
                     title={`${m.month}: Disbursed ₹${m.disbursed} Lakhs`}
                   />
@@ -161,7 +161,7 @@ function SanctionedVsDisbursedAnalytics() {
               </div>
 
               {/* Month Label */}
-              <span className="mt-2.5 text-xs font-bold text-[#0F2237]">{m.month}</span>
+              <span className="mt-2.5 text-xs font-bold text-foreground">{m.month}</span>
             </div>
           );
         })}
@@ -194,8 +194,8 @@ function AdminDashboard() {
           <SanctionedVsDisbursedAnalytics />
         </div>
 
-        <section className="surface-card p-6 border-2 border-[#CBD5E1]">
-          <h2 className="text-base font-bold text-[#0F2237]">Conversion Funnel</h2>
+        <section className="surface-card p-6 border border-border">
+          <h2 className="text-base font-bold text-foreground">Conversion Funnel</h2>
           <p className="text-sm text-muted-foreground">This quarter overview</p>
           <ul className="mt-5 space-y-4">
             {FUNNEL.map((step) => (
@@ -204,9 +204,9 @@ function AdminDashboard() {
                   <span className="text-muted-foreground">{step.stage}</span>
                   <span className="stat-figure">{step.count}</span>
                 </div>
-                <div className="mt-1.5 h-2 rounded-full bg-muted">
+                <div className="mt-1.5 h-2 rounded-full bg-slate-100">
                   <div
-                    className="h-2 rounded-full bg-primary"
+                    className="h-2 rounded-full bg-slate-800"
                     style={{ width: `${(step.count / maxFunnel) * 100}%` }}
                   />
                 </div>
@@ -224,12 +224,12 @@ function AdminDashboard() {
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-xs font-semibold text-emerald-700 hover:bg-emerald-50 h-7 px-2 gap-1 cursor-pointer"
+                className="text-xs font-semibold text-slate-700 hover:bg-slate-100 h-7 px-2 gap-1 cursor-pointer"
                 onClick={() => exportLeadsToExcel(validCases, "admin_cases_summary")}
               >
                 <Download className="size-3.5" /> Export Excel
               </Button>
-              <Link to="/leads" className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+              <Link to="/leads" className="flex items-center gap-1 text-sm font-semibold text-foreground hover:underline">
                 View all pipeline <ArrowUpRight className="size-3.5" />
               </Link>
             </div>
@@ -240,7 +240,7 @@ function AdminDashboard() {
                 <Link
                   to="/cases/$caseId"
                   params={{ caseId: String(c.id || "NL-1041") }}
-                  className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 transition-colors hover:bg-[#EDF3FD]/80"
+                  className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 transition-colors hover:bg-slate-50"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium">{c.student}</p>
@@ -420,7 +420,7 @@ function SalesDashboard() {
                     </Link>
                     <span className="text-xs text-muted-foreground">({item.course})</span>
                     {item.effectiveStatus === "Overdue" && (
-                      <span className="rounded bg-rose-600 px-1.5 py-0.2 text-[10px] font-extrabold text-white">
+                      <span className="rounded bg-slate-900 px-1.5 py-0.2 text-[10px] font-extrabold text-white">
                         OVERDUE
                       </span>
                     )}
@@ -436,14 +436,14 @@ function SalesDashboard() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-xs font-semibold text-primary border-primary/40 hover:bg-primary/10"
+                    className="text-xs font-semibold text-slate-800 border-slate-300 hover:bg-slate-100"
                     onClick={() => toast.success(`Simulating call to ${item.studentName} (${item.phone})...`)}
                   >
                     <PhoneCall className="mr-1.5 size-3.5" /> Call Student
                   </Button>
                   <Button
                     size="sm"
-                    className="text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white"
                     onClick={() => handleOpenCompleteModal(item.caseId, item.id, item.studentName)}
                   >
                     <CheckCircle2 className="mr-1.5 size-3.5" /> Mark Done
@@ -525,7 +525,7 @@ function SalesDashboard() {
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[750px] text-sm">
-            <thead className="bg-[#EDF3FD] text-left text-xs uppercase tracking-wide text-[#0F2237] border-b border-[#DDE5F0]">
+            <thead className="bg-slate-100/80 text-left text-xs uppercase tracking-wide text-slate-700 border-b border-slate-200">
               <tr>
                 <th className="px-5 py-3 font-bold">Student / Case ID</th>
                 <th className="px-5 py-3 font-bold">Target Destination</th>
@@ -564,14 +564,14 @@ function SalesDashboard() {
                     <td className="px-5 py-3.5 stat-figure font-bold">{formatLakh(c.amount)}</td>
                     <td className="px-5 py-3.5">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold border ${
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
                           c.interestStatus === "Interested"
-                            ? "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
+                            ? "bg-slate-900 text-white border-slate-900"
                             : c.interestStatus === "Follow-up Required"
-                            ? "bg-amber-500/15 text-amber-700 border-amber-500/30"
+                            ? "bg-slate-200 text-slate-900 border-slate-400"
                             : c.interestStatus === "Not Interested"
-                            ? "bg-rose-500/15 text-rose-700 border-rose-500/30"
-                            : "bg-slate-500/15 text-slate-700 border-slate-500/30"
+                            ? "bg-slate-100 text-slate-500 border-slate-300 line-through"
+                            : "bg-slate-100 text-slate-700 border-slate-300"
                         }`}
                       >
                         {c.interestStatus || "Not Contacted"}
@@ -582,9 +582,9 @@ function SalesDashboard() {
                         <span className="font-bold text-foreground">
                           {docP.received}/{docP.total}
                         </span>
-                        <div className="w-16 h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="w-16 h-2 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
                           <div
-                            className={`h-full ${docP.isComplete ? "bg-emerald-600" : "bg-primary"}`}
+                            className={`h-full ${docP.isComplete ? "bg-slate-900" : "bg-slate-700"}`}
                             style={{ width: `${docP.percentage}%` }}
                           />
                         </div>
@@ -592,7 +592,7 @@ function SalesDashboard() {
                     </td>
                     <td className="px-5 py-3.5">
                       {isHanded ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-700 px-2 py-0.5 text-[11px] font-bold border border-emerald-500/30">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-900 px-2 py-0.5 text-[11px] font-semibold border border-slate-300">
                           <CheckCircle2 className="size-3" /> Handed Over
                         </span>
                       ) : (
@@ -658,7 +658,7 @@ function SalesDashboard() {
               <Button
                 type="submit"
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
               >
                 Save & Complete
               </Button>
@@ -766,8 +766,8 @@ function ProcessingDashboard() {
           <div className="flex items-center gap-3">
             <Button
               size="sm"
-              variant="ghost"
-              className="text-xs font-semibold text-emerald-700 hover:bg-emerald-50 h-7 px-2 gap-1 cursor-pointer"
+              variant="outline"
+              className="text-xs font-semibold text-slate-800 border-slate-300 hover:bg-slate-100 h-7 px-2.5 gap-1 cursor-pointer"
               onClick={() =>
                 exportLeadsToExcel(
                   CASES.filter((c) => c.stage === "Docs Collected" || c.stage === "Sent to Lender"),
@@ -852,8 +852,8 @@ function ViewerDashboard() {
           <SanctionedVsDisbursedAnalytics />
         </div>
 
-        <section className="surface-card p-6 border-2 border-[#CBD5E1]">
-          <h2 className="text-base font-bold text-[#0F2237]">High-Level Pipeline Funnel</h2>
+        <section className="surface-card p-6 border border-border">
+          <h2 className="text-base font-bold text-foreground">High-Level Pipeline Funnel</h2>
           <p className="text-xs text-muted-foreground">Quarterly audit breakdown</p>
           <ul className="mt-5 space-y-4">
             {FUNNEL.map((step) => (
@@ -862,9 +862,9 @@ function ViewerDashboard() {
                   <span className="text-muted-foreground">{step.stage}</span>
                   <span className="stat-figure">{step.count}</span>
                 </div>
-                <div className="mt-1.5 h-2 rounded-full bg-muted">
+                <div className="mt-1.5 h-2 rounded-full bg-slate-100">
                   <div
-                    className="h-2 rounded-full bg-primary"
+                    className="h-2 rounded-full bg-slate-800"
                     style={{ width: `${(step.count / maxFunnel) * 100}%` }}
                   />
                 </div>

@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useCases } from "@/lib/cases-context";
+import { getStoredToken, publicRegisterStudentApi } from "@/lib/api-client";
 import {
   DocumentUploadSection,
   type UploadedDocumentEntry,
@@ -102,18 +104,21 @@ function numberValue(value: string) {
 }
 
 export function StudentRegistrationForm() {
+  const navigate = useNavigate();
   const { addCase } = useCases();
   const [step, setStep] = useState<1 | 2>(1);
   const [formData, setFormData] = useState<FormData>(EMPTY_DATA);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [createdCaseId, setCreatedCaseId] = useState<string | null>(null);
 
   const update = (field: keyof FormData, value: string) => {
     setFormData((previous) => ({ ...previous, [field]: value }));
   };
 
-  const submit = () => {
-    addCase({
-      student: formData.fullName,
+  const submit = async () => {
+    const payload = {
+      student: formData.fullName || "Student Applicant",
       phone: formData.mobile,
       alternativePhone: formData.alternativePhone,
       email: formData.email,
@@ -157,7 +162,7 @@ export function StudentRegistrationForm() {
         experience: formData.workExperience,
       },
       guarantor: formData.hasGuarantor === "Yes" ? {
-        hasGuarantor: "Yes",
+        hasGuarantor: "Yes" as const,
         name: formData.guarantorName,
         relation: formData.guarantorRelation,
         contact: formData.guarantorPhone,
@@ -176,7 +181,7 @@ export function StudentRegistrationForm() {
         permanentAddress: formData.guarantorPermanentAddress,
       } : undefined,
       collateral: {
-        hasCollateral: formData.propertyType || formData.propertyLocation ? "Yes" : "",
+        hasCollateral: (formData.propertyType || formData.propertyLocation ? "Yes" : "No") as "Yes" | "No",
         type: formData.propertyType,
         location: formData.propertyLocation,
         marketValue: numberValue(formData.propertyMarketValue),
@@ -185,19 +190,68 @@ export function StudentRegistrationForm() {
       studentDocuments: formData.studentDocuments,
       parentDocuments: formData.parentDocuments,
       propertyDocuments: formData.propertyDocuments,
-    });
-    setSubmitted(true);
-    toast.success("Student lead submitted successfully.");
+    };
+
+    if (getStoredToken()) {
+      const created = addCase({
+        ...payload,
+        stage: "New Lead",
+        interestStatus: "Not Contacted",
+        contactStatus: "Not Contacted",
+        handover: {
+          isHandedOver: false,
+        },
+      });
+      setCreatedCaseId(created.id);
+      setSubmitted(true);
+      toast.success("Student lead registered successfully.");
+    } else {
+      setSubmitting(true);
+      try {
+        const res = await publicRegisterStudentApi(payload);
+        if (res.success) {
+          setSubmitted(true);
+          toast.success("Student registration submitted successfully!");
+        } else {
+          toast.error(res.error || "Failed to submit registration. Please verify details.");
+        }
+      } catch {
+        toast.error("Unable to submit registration. Backend may be offline.");
+      } finally {
+        setSubmitting(false);
+      }
+    }
   };
 
   if (submitted) {
     return (
-      <div className="surface-card p-8 text-center">
+      <div className="surface-card p-8 text-center space-y-3">
         <CheckCircle2 className="mx-auto size-14 text-success" />
-        <h2 className="mt-4 text-2xl font-bold">Lead submitted successfully</h2>
-        <Button className="mt-6" variant="outline" onClick={() => { setFormData(EMPTY_DATA); setStep(1); setSubmitted(false); }}>
-          Submit Another Registration
-        </Button>
+        <h2 className="mt-4 text-2xl font-bold">Student Lead Registered Successfully</h2>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          The lead has been added to your Sales pipeline. Contact the student to collect their documents, then handover the verified file to the Relationship Manager in Step 4.
+        </p>
+        <div className="flex flex-wrap justify-center gap-3 pt-4">
+          {createdCaseId && (
+            <Button
+              onClick={() => navigate({ to: `/cases/${createdCaseId}` })}
+              className="bg-primary hover:bg-primary/90 text-white font-bold gap-2"
+            >
+              Open Application File (Manage Case) <ArrowRight className="size-4" />
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => {
+              setFormData(EMPTY_DATA);
+              setStep(1);
+              setSubmitted(false);
+              setCreatedCaseId(null);
+            }}
+          >
+            Submit Another Registration
+          </Button>
+        </div>
       </div>
     );
   }
@@ -364,7 +418,10 @@ export function StudentRegistrationForm() {
         {step === 1 ? (
           <Button type="button" onClick={() => setStep(2)}>Next<ArrowRight className="ml-2 size-4" /></Button>
         ) : (
-          <Button type="submit">Submit Lead<CheckCircle2 className="ml-2 size-4" /></Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Submitting..." : "Submit Application"}
+            <CheckCircle2 className="ml-2 size-4" />
+          </Button>
         )}
       </div>
     </form>
